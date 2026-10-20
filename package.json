@@ -1,0 +1,16 @@
+{
+  "name": "stashov-personal-ai",
+  "version": "2.0.0",
+  "description": "Stashov — Context-Aware Personal AI Memory, Browser Bookmark Vault & Impulse-Gated Buyer Engine on Nebius Token Factory + NVIDIA Nemotron",
+  "license": "Apache-2.0",
+  "author": "Arafat Sani",
+  "scripts": {
+    "start": "node server.js",
+    "sync-bookmarks": "node scripts/sync-bookmarks.js",
+    "worker": "node jobs/nebius-serverless-worker.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

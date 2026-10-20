@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STASHOV — Personal AI Memory & Impulse Gate (Nebius x NVIDIA)</title>
+  <style>
+    :root {
+      --bg: #080b10;
+      --panel: #10151f;
+      --panel-alt: #151c29;
+      --border: #232e42;
+      --text: #eef2f8;
+      --muted: #8f9eb5;
+      --nvidia: #76b900;
+      --nebius: #38bdf8;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: radial-gradient(circle at top right, #131c2e 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(8, 11, 16, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--nvidia), var(--nebius));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #05080d;
+      box-shadow: 0 0 20px rgba(118, 185, 0, 0.35);
+    }
+    .brand h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .brand p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .infra-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .pill {
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill.nvidia { border-color: rgba(118, 185, 0, 0.5); color: #a3e635; }
+    .pill.nebius { border-color: rgba(56, 189, 248, 0.5); color: #7dd3fc; }
+    .pill.budget { border-color: rgba(16, 185, 129, 0.5); color: #6ee7b7; }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 22px 28px 60px;
+    }
+
+    /* Top KPI Bar */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .kpi-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 15px 18px;
+    }
+    .kpi-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+    }
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      background: var(--panel);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      border-color: #3b4d6e;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(118, 185, 0, 0.2), rgba(56, 189, 248, 0.2));
+      color: #fff;
+      border-color: var(--nvidia);
+    }
+
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    /* Cards & Grids */
+    .section-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .btn {
+      background: var(--nvidia);
+      color: #06090e;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn.secondary {
+      background: var(--panel-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn.nebius-btn {
+      background: var(--nebius);
+      color: #041019;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .badge.green { background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge.amber { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge.rose { background: rgba(244, 63, 94, 0.16); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
+    .badge.blue { background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      background: var(--panel-alt);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .price-floor { font-size: 20px; font-weight: 800; color: #34d399; }
+    .price-retail { font-size: 13px; color: var(--muted); text-decoration: line-through; }
+    .price-cpu { font-size: 12px; color: #7dd3fc; margin-left: auto; }
+
+    .meta-box {
+      font-size: 12.5px;
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid var(--nebius);
+      padding: 8px 10px;
+      color: #cbd5e1;
+    }
+    .meta-box.warn { border-left-color: var(--rose); }
+    .meta-box.dupe { border-left-color: var(--nvidia); }
+
+    /* Bookmark Explorer Layout */
+    .explorer-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px) {
+      .explorer-layout { grid-template-columns: 1fr; }
+    }
+    .cat-sidebar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 760px;
+      overflow-y: auto;
+    }
+    .cat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 11px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--muted);
+      border: 1px solid transparent;
+    }
+    .cat-item:hover { background: var(--panel-alt); color: var(--text); }
+    .cat-item.active {
+      background: rgba(118, 185, 0, 0.14);
+      color: #fff;
+      border-color: rgba(118, 185, 0, 0.45);
+      font-weight: 600;
+    }
+    .cat-count {
+      font-size: 11px;
+      background: var(--panel-alt);
+      padding: 2px 7px;
+      border-radius: 99px;
+      color: var(--text);
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    input, select, textarea {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 13px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      width: 100%;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--nebius);
+    }
+
+    .bm-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .bm-table th, .bm-table td {
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .bm-table th {
+      background: var(--panel-alt);
+      color: var(--muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+    }
+    .bm-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .bm-link { color: #7dd3fc; text-decoration: none; font-weight: 600; }
+    .bm-link:hover { text-decoration: underline; }
+
+    .terminal-box {
+      background: #05070b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      white-space: pre-wrap;
+      color: #d1fae5;
+      max-height: 440px;
+      overflow-y: auto;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: var(--panel-alt);
+      color: var(--muted);
+      margin-right: 4px;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <div>
+        <h1>STASHOV — Personal AI Memory & Impulse Gate</h1>
+        <p>Nebius Token Factory + NVIDIA Nemotron 3 Ultra / Super / Nano • Personal AI Track</p>
+      </div>
+    </div>
+    <div class="infra-pills">
+      <span class="pill nvidia" id="modelTierPill">NVIDIA Nemotron 3 Tiered Router: ACTIVE</span>
+      <span class="pill nebius" id="bookmarksSyncPill">1,386 Browser Bookmarks Categorized</span>
+      <span class="pill budget" id="budgetHeaderPill">Fun-Money Remaining: $215.00 / $300.00</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Top KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Browser Bookmarks Organized</div>
+        <div class="kpi-value" id="kpiTotalBookmarks">1,386</div>
+        <div class="kpi-sub" id="kpiBrowsersSynced">Chrome (1,197) + Brave (799) • 14 Categories</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Impulse-Gated Wishlist</div>
+        <div class="kpi-value" id="kpiWishlistCount">12</div>
+        <div class="kpi-sub">3 Approved • 4 Discounter • 5 Blocked/Cooling</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">October Fun-Money Cap</div>
+        <div class="kpi-value" style="color:#34d399" id="kpiBudgetLeft">$215.00</div>
+        <div class="kpi-sub">$85.00 spent of $300.00 cap • 6 Owned Items Tracked</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Living Protocols & Guardrails</div>
+        <div class="kpi-value" id="kpiProtocolsCount">5</div>
+        <div class="kpi-sub">AM/PM Skincare, Energy Stack, Peptide & Fragrance Rules</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Discounter & Dupe Savings</div>
+        <div class="kpi-value" style="color:#7dd3fc">$2,864</div>
+        <div class="kpi-sub">Identified across Retail vs Discounters & Dupes</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('bookmarks')">1. Browser Bookmarks Vault (1,386 Categorized)</button>
+      <button class="tab-btn" onclick="switchTab('wishlist')">2. Impulse-Gated Wishlist & Anti-Hype</button>
+      <button class="tab-btn" onclick="switchTab('protocols')">3. Living Playbooks & Routine Conflict Engine</button>
+      <button class="tab-btn" onclick="switchTab('context')">4. My Context, Wardrobe & Budget Memory</button>
+      <button class="tab-btn" onclick="switchTab('ingest')">5. 2-Second Ingest Studio (URL / Screenshot OCR)</button>
+      <button class="tab-btn" onclick="switchTab('router')">6. Nebius Token Factory Router & 1M-Context Audit</button>
+    </div>
+
+    <!-- TAB 1: BROWSER BOOKMARKS VAULT -->
+    <section id="tab-bookmarks" class="view-section active">
+      <div class="section-header">
+        <div>
+          <h2>Categorized Browser Bookmark Vault (Chrome + Brave + Edge)</h2>
+          <p style="font-size:13px;color:var(--muted)">Deduplicated from your real local browser profiles, embedded with Qwen3-Embedding-8B, and sorted into 14 actionable categories.</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn secondary" onclick="resyncBookmarks()">Re-Sync Local Browser Bookmarks</button>
+        </div>
+      </div>
+
+      <div class="explorer-layout">
+        <div class="cat-sidebar" id="categorySidebar"></div>
+        <div>
+          <div class="search-bar">
+            <input type="text" id="bmSearchInput" placeholder="Semantic + keyword search across 1,386 bookmarks (e.g., 'arabic perfume', 'soccer jersey', 'peptide', 'cashmere', 'interview')..." onkeydown="if(event.key==='Enter') loadBookmarks()" />
+            <select id="bmBrowserFilter" style="width:170px;" onchange="loadBookmarks()">
+              <option value="ALL">All Browsers</option>
+              <option value="Chrome">Chrome</option>
+              <option value="Brave">Brave</option>
+            </select>
+            <button class="btn nebius-btn" onclick="loadBookmarks()">Search Vault</button>
+          </div>
+          <div style="margin-bottom:10px;font-size:12.5px;color:var(--muted)" id="bmResultStatus">Showing bookmarks...</div>
+          <table class="bm-table">
+            <thead>
+              <tr>
+                <th>Title & Saved Link</th>
+                <th>Category</th>
+                <th>Browser / Original Folder</th>
+                <th>Snapshot & Action</th>
+              </tr>
+            </thead>
+            <tbody id="bmTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: IMPULSE-GATED WISHLIST -->
+    <section id="tab-wishlist" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2>Smart Buyer & Impulse-Gated Wishlist</h2>
+          <p style="font-size:13px;color:var(--muted)">Every item is checked against your Owned Inventory, $300 Monthly Cap, Routine Conflicts, Discounter Floors, and a 14-Day Cooling-Off Lock.</p>
+        </div>
+      </div>
+      <div id="impulseAuditModal" style="display:none;margin-bottom:18px;">
+        <div class="terminal-box" id="impulseAuditOutput"></div>
+      </div>
+      <div class="cards-grid" id="wishlistGrid"></div>
+    </section>
+
+    <!-- TAB 3: LIVING PLAYBOOKS & ROUTINES -->
+    <section id="tab-protocols" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2>Living Playbooks & Routine Conflict Detector</h2>
+          <p style="font-size:13px;color:var(--muted)">Turns static "life hack" bookmarks into active Morning/Evening protocols and blocks conflicting skincare/supplement purchases.</p>
+        </div>
+      </div>
+      <div class="cards-grid" id="protocolsGrid"></div>
+    </section>
+
+    <!-- TAB 4: MY CONTEXT & OWNED INVENTORY -->
+    <section id="tab-context" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2>Personal Context, Owned Inventory & Constraints Memory</h2>
+          <p style="font-size:13px;color:var(--muted)">Why Stashov runs on private, self-hosted open-weight models: your personal budget, closet inventory, sizes, and health guardrails stay yours.</p>
+        </div>
+      </div>
+      <div class="cards-grid" id="contextGrid"></div>
+    </section>
+
+    <!-- TAB 5: INGEST STUDIO -->
+    <section id="tab-ingest" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2>2-Second Frictionless Ingest Studio (Link, Screenshot OCR, or Life Hack)</h2>
+          <p style="font-size:13px;color:var(--muted)">Routes screenshots to Vision OCR (GLM-5.3-Flash / Qwen3.8-27B) and URLs/transcripts to Nemotron Nano, auto-categorizing and checking for routine/closet conflicts.</p>
+        </div>
+      </div>
+      <div class="card" style="max-width:760px;">
+        <label style="font-size:13px;font-weight:600;">Capture Mode</label>
+        <select id="ingestMode">
+          <option value="url">Web / Social Link (TikTok, X, YouTube, Store URL)</option>
+          <option value="screenshot">Camera-Roll Price Tag / Post Screenshot OCR</option>
+          <option value="note">Life-Hack Note / Routine Step</option>
+        </select>
+        <label style="font-size:13px;font-weight:600;">Item Title / Product Name / Hack Headline</label>
+        <input type="text" id="ingestTitle" placeholder="e.g., The Ordinary Glycolic Acid 7% Toning Solution OR Oversized Charcoal Hoodie" />
+        <label style="font-size:13px;font-weight:600;">URL, Raw Screenshot Text, or Transcript Excerpt</label>
+        <textarea id="ingestInput" rows="4" placeholder="Paste URL or drop screenshot text..."></textarea>
+        <label style="font-size:13px;font-weight:600;">Retail Price ($ USD — optional for Wishlist items)</label>
+        <input type="number" id="ingestPrice" placeholder="e.g., 45" />
+        <button class="btn" onclick="submitIngest()">Ingest, Auto-Categorize & Run Impulse Gate</button>
+        <div id="ingestResultBox" style="margin-top:10px;display:none;" class="terminal-box"></div>
+      </div>
+    </section>
+
+    <!-- TAB 6: NEBIUS TOKEN FACTORY ROUTER & 1M-CONTEXT VAULT AUDIT -->
+    <section id="tab-router" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2>Nebius Token Factory Multi-Model Router & 1M-Context Vault Auditor</h2>
+          <p style="font-size:13px;color:var(--muted)">Live telemetry across Nemotron 3 Ultra (1M context), Super, Nano, Vision, and Qwen3-Embedding-8B + Nebius Serverless Jobs.</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn nebius-btn" onclick="triggerServerlessJob()">Run Nebius Serverless Job Poller Now</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3 style="font-size:15px;">Ask Nemotron 3 Ultra (1M-Context) Across Your Entire 1,386-Item Vault</h3>
+        <div class="search-bar" style="margin-top:8px;margin-bottom:8px;">
+          <input type="text" id="vaultAuditInput" value="Audit my 1,386 bookmarks, wishlist, owned wardrobe, and skincare stack: what should I buy, skip, or consolidate?" />
+          <button class="btn" onclick="runVaultAudit()">Run 1M-Context Synthesis</button>
+        </div>
+        <div class="terminal-box" id="vaultAuditOutput">Click "Run 1M-Context Synthesis" or "Run Nebius Serverless Job Poller Now" to execute...</div>
+      </div>
+
+      <h3 style="font-size:15px;margin-bottom:10px;">Live Nebius Token Factory Routing Telemetry</h3>
+      <table class="bm-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Task & Workflow Step</th>
+            <th>Routed Model on Token Factory</th>
+            <th>Tier</th>
+            <th>Latency</th>
+            <th>Tokens (In/Out)</th>
+            <th>Est. Cost</th>
+          </tr>
+        </thead>
+        <tbody id="telemetryTableBody"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    let vaultData = null;
+    let selectedCategory = 'ALL';
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-section').forEach((s) => s.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      const idxMap = { bookmarks: 0, wishlist: 1, protocols: 2, context: 3, ingest: 4, router: 5 };
+      document.querySelectorAll('.tab-btn')[idxMap[tabId]].classList.add('active');
+    }
+
+    async function initApp() {
+      const res = await fetch('/api/vault');
+      vaultData = await res.json();
+      renderHeaderAndKpis();
+      renderCategorySidebar();
+      renderWishlist();
+      renderProtocols();
+      renderContext();
+      renderTelemetry();
+      await loadBookmarks();
+    }
+
+    function renderHeaderAndKpis() {
+      const ctx = vaultData.personal_context || {};
+      const rem = (ctx.monthly_discretionary_budget || 300) - (ctx.spent_this_month || 0);
+      document.getElementById('kpiTotalBookmarks').textContent = (vaultData.total_bookmarks || 0).toLocaleString();
+      document.getElementById('bookmarksSyncPill').textContent = `${(vaultData.total_bookmarks || 0).toLocaleString()} Browser Bookmarks Categorized`;
+      document.getElementById('budgetHeaderPill').textContent = `Fun-Money Remaining: $${rem.toFixed(2)} / $${(ctx.monthly_discretionary_budget || 300).toFixed(2)}`;
+      document.getElementById('kpiBudgetLeft').textContent = `$${rem.toFixed(2)}`;
+      document.getElementById('kpiWishlistCount').textContent = (vaultData.wishlist || []).length;
+      document.getElementById('kpiProtocolsCount').textContent = (vaultData.protocols || []).length;
+    }
+
+    function renderCategorySidebar() {
+      const sb = document.getElementById('categorySidebar');
+      const counts = vaultData.category_counts || {};
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+      let html = `
+        <div class="cat-item ${selectedCategory === 'ALL' ? 'active' : ''}" onclick="selectCategory('ALL')">
+          <span>All Categorized Bookmarks</span>
+          <span class="cat-count">${vaultData.total_bookmarks || 0}</span>
+        </div>
+      `;
+      for (const [cat, cnt] of entries) {
+        const active = selectedCategory === cat ? 'active' : '';
+        html += `
+          <div class="cat-item ${active}" onclick="selectCategory('${cat.replace(/'/g, "\\'")}')">
+            <span>${cat}</span>
+            <span class="cat-count">${cnt}</span>
+          </div>
+        `;
+      }
+      sb.innerHTML = html;
+    }
+
+    function selectCategory(cat) {
+      selectedCategory = cat;
+      renderCategorySidebar();
+      loadBookmarks();
+    }
+
+    async function loadBookmarks() {
+      const q = document.getElementById('bmSearchInput').value.trim();
+      const browser = document.getElementById('bmBrowserFilter').value;
+      const params = new URLSearchParams({
+        category: selectedCategory,
+        browser,
+        q,
+        limit: 100,
+      });
+      const res = await fetch('/api/bookmarks?' + params.toString());
+      const data = await res.json();
+
+      document.getElementById('bmResultStatus').textContent =
+        `Showing ${data.items.length} of ${data.total} matching bookmarks ${selectedCategory !== 'ALL' ? `in [${selectedCategory}]` : ''} ${q ? `for query "${q}"` : ''}`;
+
+      const tbody = document.getElementById('bmTableBody');
+      tbody.innerHTML = data.items
+        .map(
+          (b) => `
+        <tr>
+          <td>
+            <a class="bm-link" href="${b.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(b.title)}</a>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${escapeHtml(b.domain)} ${b.match_score ? `• Match Score: ${b.match_score}` : ''}</div>
+            <div>${(b.tags || []).map((t) => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>
+          </td>
+          <td><span class="badge blue">${escapeHtml(b.category)}</span></td>
+          <td style="font-size:12px;color:var(--muted)">
+            <strong style="color:var(--text)">${escapeHtml(b.browser)}</strong><br/>
+            ${escapeHtml(b.original_folder)}
+          </td>
+          <td>
+            <div style="font-size:11px;color:#34d399;margin-bottom:5px;">✓ ${escapeHtml(b.snapshot_status)}</div>
+            <button class="btn secondary" style="padding:4px 9px;font-size:11.5px;" onclick="promoteToWishlist('${b.id}')">+ Impulse-Gate Wishlist</button>
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+
+    function renderWishlist() {
+      const grid = document.getElementById('wishlistGrid');
+      grid.innerHTML = (vaultData.wishlist || [])
+        .map((w) => {
+          let badgeClass = 'amber';
+          if (w.verdict === 'BUY_RECOMMENDED' || w.verdict === 'BUY_AT_DISCOUNTER') badgeClass = 'green';
+          if (w.verdict === 'SKIP_DUPLICATE') badgeClass = 'rose';
+
+          return `
+          <div class="card">
+            <div class="card-top">
+              <div>
+                <div style="font-size:11.5px;color:var(--muted);font-weight:600;">${escapeHtml(w.category)} • ${escapeHtml(w.cooling_status)}</div>
+                <h3 style="font-size:15.5px;margin-top:3px;">
+                  <a href="${w.url}" target="_blank" class="bm-link" style="color:var(--text)">${escapeHtml(w.title)}</a>
+                </h3>
+              </div>
+              <span class="badge ${badgeClass}">${escapeHtml(w.verdict_label)}</span>
+            </div>
+
+            <div class="price-row">
+              <div>
+                <span class="price-floor">$${Number(w.lowest_verified_price).toFixed(2)}</span>
+                <span class="price-retail">$${Number(w.retail_price).toFixed(2)} Retail</span>
+                <div style="font-size:11px;color:var(--muted);">Best Source: ${escapeHtml(w.best_source)}</div>
+              </div>
+              <div class="price-cpu">Est. $${Number(w.cost_per_use).toFixed(2)} / use</div>
+            </div>
+
+            <div class="meta-box ${w.inventory_overlap.includes('HIGH') ? 'warn' : ''}">
+              <strong>Owned Inventory Check:</strong> ${escapeHtml(w.inventory_overlap)}
+            </div>
+            <div class="meta-box ${w.routine_compatibility.includes('CONFLICT') ? 'warn' : ''}">
+              <strong>Routine / Constraint Check:</strong> ${escapeHtml(w.routine_compatibility)}
+            </div>
+            <div class="meta-box dupe">
+              <strong>Chemical / Spec Dupe:</strong> ${escapeHtml(w.dupe_alternative)}
+            </div>
+
+            <p style="font-size:12.5px;color:var(--muted);">${escapeHtml(w.anti_hype_summary)}</p>
+
+            <div style="display:flex;gap:8px;margin-top:auto;">
+              <button class="btn secondary" style="width:100%" onclick="runImpulseAudit('${w.id}')">Ask Nemotron 3 Ultra: "Talk Me Out of Buying This"</button>
+            </div>
+          </div>
+        `;
+        })
+        .join('');
+    }
+
+    function renderProtocols() {
+      const grid = document.getElementById('protocolsGrid');
+      grid.innerHTML = (vaultData.protocols || [])
+        .map(
+          (p) => `
+        <div class="card">
+          <div class="card-top">
+            <div>
+              <div style="font-size:11.5px;color:var(--nebius);font-weight:600;">${escapeHtml(p.schedule)} • ${escapeHtml(p.source_platform)}</div>
+              <h3 style="font-size:16px;margin-top:3px;">${escapeHtml(p.title)}</h3>
+            </div>
+            <span class="badge green">${escapeHtml(p.credibility_badge)}</span>
+          </div>
+          <div class="meta-box warn">
+            <strong>Active Conflict Guardrail:</strong> ${escapeHtml(p.conflict_alert)}
+          </div>
+          <ul style="padding-left:18px;font-size:13px;color:#d1d5db;display:flex;flex-direction:column;gap:6px;">
+            ${(p.steps || []).map((s) => `<li>${escapeHtml(s)}</li>`).join('')}
+          </ul>
+          <div style="font-size:11.5px;color:#34d399;margin-top:auto;">✓ ${escapeHtml(p.snapshot_status)}</div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function renderContext() {
+      const ctx = vaultData.personal_context || {};
+      const grid = document.getElementById('contextGrid');
+
+      const ownedHtml = (ctx.owned_inventory || [])
+        .map(
+          (o) => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <strong>${escapeHtml(o.name)}</strong> <span class="badge blue">${escapeHtml(o.status)}</span>
+          <div style="color:var(--muted);font-size:12px;margin-top:2px;">${escapeHtml(o.notes)}</div>
+        </div>
+      `
+        )
+        .join('');
+
+      const constraintsHtml = (ctx.skin_and_health_constraints || []).map((c) => `<li>${escapeHtml(c)}</li>`).join('');
+
+      grid.innerHTML = `
+        <div class="card">
+          <h3>"Already Own" Closet & Shelf Inventory (Blocks Duplicate Buys)</h3>
+          ${ownedHtml}
+        </div>
+        <div class="card">
+          <h3>Personal Constraints, Skin/Routine & Dietary Guardrails</h3>
+          <ul style="padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+            ${constraintsHtml}
+          </ul>
+          <div class="meta-box dupe" style="margin-top:12px;">
+            <strong>Fragrance Notes Loved:</strong> ${(ctx.fragrance_profile?.loved_notes || []).join(', ')}<br/>
+            <strong>Avoid Notes:</strong> ${(ctx.fragrance_profile?.avoid_notes || []).join(', ')}
+          </div>
+          <div class="meta-box" style="margin-top:8px;">
+            <strong>Sizing Memory:</strong> Tops: ${ctx.sizes?.tops} | Bottoms: ${ctx.sizes?.bottoms} | Footwear: ${ctx.sizes?.footwear}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTelemetry() {
+      const tbody = document.getElementById('telemetryTableBody');
+      tbody.innerHTML = (vaultData.telemetry || [])
+        .map(
+          (t) => `
+        <tr>
+          <td style="font-size:12px;color:var(--muted)">${new Date(t.timestamp).toLocaleTimeString()}</td>
+          <td><strong>${escapeHtml(t.task)}</strong></td>
+          <td><span class="badge green">${escapeHtml(t.model)}</span></td>
+          <td style="font-size:12px;color:#7dd3fc">${escapeHtml(t.tier)}</td>
+          <td>${t.latency_ms} ms</td>
+          <td>${(t.tokens_in || 0).toLocaleString()} / ${(t.tokens_out || 0).toLocaleString()}</td>
+          <td>$${Number(t.cost_usd || 0).toFixed(4)}</td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+
+    async function runImpulseAudit(itemId) {
+      const modal = document.getElementById('impulseAuditModal');
+      const out = document.getElementById('impulseAuditOutput');
+      modal.style.display = 'block';
+      out.textContent = 'Routing to NVIDIA Nemotron 3 Ultra on Nebius Token Factory for Impulse-Gate Audit...';
+      const res = await fetch('/api/impulse-gate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: itemId }),
+      });
+      const data = await res.json();
+      out.textContent = data.analysis || JSON.stringify(data, null, 2);
+      const vRes = await fetch('/api/vault');
+      vaultData = await vRes.json();
+      renderTelemetry();
+    }
+
+    async function promoteToWishlist(bmId) {
+      const res = await fetch('/api/promote-bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bmId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const vRes = await fetch('/api/vault');
+        vaultData = await vRes.json();
+        renderHeaderAndKpis();
+        renderWishlist();
+        renderTelemetry();
+        switchTab('wishlist');
+      }
+    }
+
+    async function submitIngest() {
+      const mode = document.getElementById('ingestMode').value;
+      const title = document.getElementById('ingestTitle').value;
+      const input = document.getElementById('ingestInput').value;
+      const price = document.getElementById('ingestPrice').value;
+      const box = document.getElementById('ingestResultBox');
+      box.style.display = 'block';
+      box.textContent = 'Ingesting via Nebius Token Factory Router...';
+
+      const res = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, title, input, price }),
+      });
+      const data = await res.json();
+      box.textContent = JSON.stringify(data, null, 2);
+      await initApp();
+    }
+
+    async function runVaultAudit() {
+      const q = document.getElementById('vaultAuditInput').value;
+      const out = document.getElementById('vaultAuditOutput');
+      out.textContent = 'Executing 1M-Context Vault Audit on nvidia/Nemotron-3-Ultra-550b-a55b...';
+      const res = await fetch('/api/vault-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      });
+      const data = await res.json();
+      out.textContent = data.report;
+      const vRes = await fetch('/api/vault');
+      vaultData = await vRes.json();
+      renderTelemetry();
+    }
+
+    async function triggerServerlessJob() {
+      const out = document.getElementById('vaultAuditOutput');
+      out.textContent = 'Running Nebius Serverless Background Job (Deal Poller + Link-Rot Verifier + Weekly Digest)...';
+      const res = await fetch('/api/serverless-job', { method: 'POST' });
+      const data = await res.json();
+      out.textContent = JSON.stringify(data.report, null, 2);
+      const vRes = await fetch('/api/vault');
+      vaultData = await vRes.json();
+      renderTelemetry();
+    }
+
+    async function resyncBookmarks() {
+      const res = await fetch('/api/bookmarks/sync', { method: 'POST' });
+      const data = await res.json();
+      alert(`Synced ${data.total_unique} unique bookmarks from ${data.browsers_synced.join(', ')}`);
+      await initApp();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
