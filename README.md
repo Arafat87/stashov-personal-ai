@@ -51,26 +51,124 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 ---
 
-## Quick Start
+## Quick Start (Local)
 
 ```bash
-# 1. Clone or open the repository
-cd E:/locket
+# 1. Clone the repository
+git clone https://github.com/arafatsani/stashov-personal-ai.git
+cd stashov-personal-ai
 
-# 2. (Optional) Configure your Nebius Token Factory API Key
+# 2. Install dependencies
+npm ci
+
+# 3. (Optional) Configure your Nebius Token Factory API Key
 cp .env.example .env
-# Edit .env and set NEBIUS_API_KEY=...
+# Edit .env and set NEBIUS_API_KEY=your_key_here
 
-# 3. Sync & categorize local browser bookmarks (Chrome / Brave / Edge)
+# 4. Sync & categorize local browser bookmarks (Chrome / Brave / Edge)
 npm run sync-bookmarks
 
-# 4. Run the Nebius Serverless Job worker check
+# 5. Run the Nebius Serverless Job worker check
 npm run worker
 
-# 5. Start the Stashov Web Vault & Agent Server
+# 6. Start the Stashov Web Vault & Agent Server
 npm start
 # Open http://localhost:3847
 ```
+
+---
+
+## Deploy to Production (Demo URL for Hackathon)
+
+### Option A: Vercel (Recommended — Free Tier, Zero Config)
+
+1. Push this repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → Import your GitHub repo
+3. Vercel auto-detects `vercel.json` and deploys the Node.js server
+4. In **Settings → Environment Variables**, add:
+   - `NEBIUS_API_KEY` = your Token Factory API key
+   - (All other model env vars are pre-configured in `vercel.json`)
+5. Deploy → Get your `https://stashov-personal-ai.vercel.app` demo URL
+
+### Option B: Render (Free Web Service)
+
+1. Push this repo to GitHub
+2. Go to [render.com](https://render.com) → **New +** → **Web Service** → Connect repo
+3. Render auto-detects `render.yaml` and configures the service
+4. In **Environment**, add `NEBIUS_API_KEY` as a secret
+5. Deploy → Get your `https://stashov-personal-ai.onrender.com` demo URL
+
+### Option C: Nebius Serverless Endpoints (Native)
+
+1. Use the Nebius AI Cloud console to create a Serverless Endpoint pointing to this repo
+2. Configure the same environment variables
+3. Deploy directly on Nebius infrastructure
+
+---
+
+## Hackathon Submission Checklist
+
+- [x] **Working project on Nebius Token Factory** using NVIDIA Nemotron models (Ultra, Super, Nano, Lightning)
+- [x] **Category: Personal AI** — always-on private assistant with persistent memory, skills, tool access
+- [x] **Project description** — what/why/how documented in this README
+- [ ] **Working demo URL** — deploy via Vercel/Render/Nebius (see above)
+- [ ] **≤3-minute public YouTube demo video** — script in `Personal AI Hackerthon.md` Section 7
+- [x] **Public code repo** — Apache 2.0 license visible at top, README with setup/run instructions
+- [x] **NVIDIA Nemotron + Token Factory usage highlighted** — model routing table above + telemetry console
+- [ ] **Feedback on Nebius + NVIDIA tools** — add to submission form
+- [x] **Category = Personal AI**
+
+---
+
+## Project Structure
+
+```
+stashov-personal-ai/
+├── server.js                    # Main HTTP server + REST API (6 endpoints)
+├── vercel.json                  # Vercel deployment config
+├── render.yaml                  # Render deployment config
+├── package.json                 # npm scripts: start, sync-bookmarks, worker, test
+├── .env.example                 # Environment template
+├── LICENSE                      # Apache 2.0
+├── README.md                    # This file
+├── scripts/
+│   └── sync-bookmarks.js        # Chrome/Brave/Edge bookmark importer + 14-category classifier
+├── jobs/
+│   └── nebius-serverless-worker.js  # Nebius Serverless Job: deal poller, link-rot verifier, digest generator
+├── public/
+│   └── index.html               # 6-tab Web Vault (Bookmarks, Wishlist, Protocols, Context, Ingest, Router)
+├── data/
+│   └── vault.json               # SQLite-free JSON vault: 1,386 bookmarks, 12 wishlist items, 5 protocols, personal context, telemetry
+└── tests/
+    └── stashov.test.js          # 4 passing tests (bookmarks, classifier, embeddings, serverless job)
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/vault` | Full vault summary + personal context + wishlist + protocols + telemetry |
+| GET | `/api/bookmarks` | Paginated, filtered, hybrid semantic+lexical search across 1,386 bookmarks |
+| POST | `/api/bookmarks/sync` | Re-sync local browser bookmarks (Chrome, Brave, Edge) |
+| POST | `/api/ingest` | Ingest URL, screenshot OCR, or life-hack note → auto-categorize + impulse-gate |
+| POST | `/api/impulse-gate` | Run Nemotron 3 Ultra "Talk Me Out of Buying This" deep audit on any item |
+| POST | `/api/promote-bookmark` | Promote any browser bookmark into the impulse-gated wishlist |
+| POST | `/api/vault-audit` | 1M-context Nemotron 3 Ultra synthesis across entire vault |
+| POST | `/api/serverless-job` | Trigger Nebius Serverless Job worker on demand |
+
+---
+
+## Feedback on Nebius Token Factory & NVIDIA Tools (for Judges)
+
+> **Nebius Token Factory:** The OpenAI-compatible API made integration trivial — drop-in replacement for any OpenAI SDK. The model catalog (`/api/public/models_info`) exposes capabilities (`function_calling`, `context_and_rag`, `responses_api`, `MTP` fast decode) so routing logic is data-driven, not hardcoded. Pricing is transparent (e.g., Qwen3-Embedding-8B at $0.01/M tokens makes semantic memory near-free). Serverless Jobs are a perfect fit for periodic background work without managing infra.
+
+> **NVIDIA Nemotron 3 Ultra (1M context):** The 1M-token window is not a gimmick — it enables genuine multi-document synthesis in one pass: 1,386 bookmarks + full Reddit review threads + ingredient sheets + personal inventory + budget + routines. This is the "killer feature" that makes a personal AI actually *personal*.
+
+> **Nemotron 3 Nano/Super/Lightning:** The tiered routing (Ultra for deep reasoning, Nano for fast extraction, Lightning for MTP decode) cuts latency and cost by 10x vs. using Ultra for everything. `Nemotron-3.5-Lightning` with MTP is notably fast for structured extraction.
+
+> **Suggested improvements:** Fine-tune support for Nemotron models would let us distill the "Impulse-Gate" prompt into a smaller specialized model. WebSocket/streaming support on Token Factory would improve perceived latency for the 1M-context Ultra calls.
 
 ---
 

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: stashov-personal-ai
+    runtime: node
+    plan: free
+    buildCommand: "npm ci"
+    startCommand: "npm start"
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: NEBIUS_BASE_URL
+        value: https://api.tokenfactory.nebius.com/v1
+      - key: MODEL_ULTRA
+        value: nvidia/Nemotron-3-Ultra-550b-a55b
+      - key: MODEL_SUPER
+        value: nvidia/Nemotron-3-Super-120b-a12b
+      - key: MODEL_NANO
+        value: nvidia/Nemotron-3-Nano-30B-A3B
+      - key: MODEL_LIGHTNING
+        value: nvidia/Nemotron-3.5-Lightning
+      - key: MODEL_VISION
+        value: zai-org/GLM-5.3-Flash
+      - key: MODEL_EMBEDDING
+        value: Qwen/Qwen3-Embedding-8B
+    healthCheckPath: /api/vault
+    autoDeploy: true
