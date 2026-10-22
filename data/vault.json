@@ -106,6 +106,34 @@
   },
   "wishlist": [
     {
+      "id": "wl_1792641477778",
+      "title": "JOGA BONITO BRAZIL",
+      "brand": "SHOPJOGABONITO",
+      "url": "https://shopjogabonito.com/cdn/shop/files/JOGA_ECCOM_218002_1.jpg?v=1780271360&width=800",
+      "category": "Life Hacks, Utilities & Reference",
+      "retail_price": 80,
+      "lowest_verified_price": 54.4,
+      "best_source": "Discounter / Verified Resale Floor",
+      "dupe_alternative": "See category spec equivalent in Vault ($25–$45)",
+      "cooling_off_days_left": 14,
+      "cooling_status": "Locked (14 days remaining)",
+      "uses_per_month": 10,
+      "cost_per_use": 0.45,
+      "inventory_overlap": "LOW — No direct duplicate detected in your active closet/shelf.",
+      "routine_compatibility": "Verified Compatible",
+      "verdict": "WAIT_OR_DUPE",
+      "verdict_label": "LOCKED FOR 14-DAY COOLING OFF",
+      "anti_hype_summary": "Captured via URL and structured by nvidia/Nemotron-3-Nano-30B-A3B. Impulse Cooling-Off lock active for 14 days.",
+      "snapshot_excerpt": "Full text & metadata snapshotted at 2026-10-22T03:57:57.778Z.",
+      "tags": [
+        "general",
+        "url",
+        "archived"
+      ],
+      "image": "/media/images/141af948fdf877ab0f.webp",
+      "image_source": "https://shopjogabonito.com/cdn/shop/files/JOGA_ECCOM_218002_1.jpg?v=1780271360&width=800"
+    },
+    {
       "id": "wl_01",
       "title": "Acqua di Parma Colonia Essenza Eau de Cologne (100ml)",
       "brand": "Acqua di Parma",
@@ -131,13 +159,15 @@
         "neroli",
         "office-scent",
         "acqua-di-parma"
-      ]
+      ],
+      "image": "/media/images/c5089c6b581c047ffb.jpg",
+      "image_source": "https://www.feelingsexy.com.au/images/products/allproducts/ACQUADIPARMA_COLONIAESSENZA_EDC100.jpg"
     },
     {
       "id": "wl_02",
       "title": "twnskn 2-in-1 Acne & Dark Spot Correcting Cleansing Bar",
       "brand": "twnskn",
-      "url": "https://twnskn.co/products/2in1-double-cleansing-bar-acne-relief-",
+      "url": "https://twnskn.co/products/2in1-double-cleansing-bar-acne-relief-discoloration-corrector",
       "category": "Skincare, Health & Protocols",
       "retail_price": 34,
       "lowest_verified_price": 28,
@@ -159,7 +189,9 @@
         "hyperpigmentation",
         "acne",
         "routine-conflict"
-      ]
+      ],
+      "image": "/media/images/ac45e0e5816b96e18a.webp",
+      "image_source": "https://twnskn.co/products/2in1-double-cleansing-bar-acne-relief-discoloration-corrector"
     },
     {
       "id": "wl_03",
@@ -186,7 +218,9 @@
         "parka",
         "winter-coat",
         "duplicate-alert"
-      ]
+      ],
+      "image": "/media/images/f9d1a1f6aaa52bd832.jpg",
+      "image_source": "https://tokyolaundry.com/collections/mens-jackets-coats"
     },
     {
       "id": "wl_04",
@@ -214,7 +248,9 @@
         "leather",
         "smart-casual",
         "interviews"
-      ]
+      ],
+      "image": "/media/images/d47dcc00b91ecb12e5.jpg",
+      "image_source": "https://thursdayboots.com/"
     },
     {
       "id": "wl_05",
@@ -241,7 +277,9 @@
         "byredo",
         "niche-perfume",
         "high-price"
-      ]
+      ],
+      "image": "/media/images/67ee867c3e606c4e49.jpg",
+      "image_source": "https://www.byredo.com/us_en/"
     },
     {
       "id": "wl_06",
@@ -268,7 +306,9 @@
         "deodorant",
         "clean-ingredients",
         "daily-essential"
-      ]
+      ],
+      "image": "/media/images/3fe1ca4ae2b7be87d3.webp",
+      "image_source": "https://jackhenry.co/pages/highperformingdeodorant?twclid=2-6a8o2"
     },
     {
       "id": "wl_07",
@@ -295,7 +335,9 @@
         "jersey",
         "retro-kit",
         "streetwear"
-      ]
+      ],
+      "image": "/media/images/dcc3032be8f50c7f40.webp",
+      "image_source": "https://www.classicfootballshirts.co.uk/cdn-cgi/image/fit=pad,q=70,f=webp//pub/media/catalog/product//0/5/050326950934-2_vezruwquy2slcuj3.jpg"
     },
     {
       "id": "wl_08",
@@ -323,7 +365,9 @@
         "skincare",
         "immunity",
         "protocol"
-      ]
+      ],
+      "image": "/media/images/f83a6c086a0f481308.webp",
+      "image_source": "https://lifegivingstore.com/grass-fed-lactoferrin/"
     },
     {
       "id": "wl_09",
@@ -351,7 +395,9 @@
         "knitwear",
         "smart-casual",
         "quince"
-      ]
+      ],
+      "image": "/media/images/5f2bd9911f7417293b.webp",
+      "image_source": "https://www.quince.com/"
     },
     {
       "id": "wl_10",
@@ -378,7 +424,9 @@
         "biohacking",
         "hardware",
         "budget-block"
-      ]
+      ],
+      "image": "/media/images/ca6a077a90109ea2d7.jpg",
+      "image_source": "https://www.eightsleep.com/"
     },
     {
       "id": "wl_11",
@@ -405,7 +453,9 @@
         "seiko",
         "automatic",
         "accessories"
-      ]
+      ],
+      "image": "/media/images/34cca7d4cb1c589e84.jpg",
+      "image_source": "https://www.seikowatches.com/us-en/"
     },
     {
       "id": "wl_12",
@@ -432,7 +482,9 @@
         "edc",
         "productivity",
         "ergonomics"
-      ]
+      ],
+      "image": "/media/images/2142954410fff8e4b7.webp",
+      "image_source": "https://www.moft.com/"
     }
   ],
   "protocols": [
@@ -538,6 +590,162 @@
     }
   ],
   "telemetry": [
+    {
+      "id": "tel_1792683242425",
+      "timestamp": "2026-10-22T15:34:02.425Z",
+      "task": "Nebius Serverless Job: Polled 13 Wishlist Items & Verified 1398 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 359,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792682386320",
+      "timestamp": "2026-10-22T15:19:46.320Z",
+      "task": "Nebius Serverless Job: Polled 13 Wishlist Items & Verified 1398 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 355,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792671514792",
+      "timestamp": "2026-10-22T12:18:34.792Z",
+      "task": "Nebius Serverless Job: Polled 13 Wishlist Items & Verified 1398 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 353,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792650061629",
+      "timestamp": "2026-10-22T06:21:01.629Z",
+      "task": "Nebius Serverless Job: Polled 13 Wishlist Items & Verified 1398 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 355,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792641514616_174",
+      "timestamp": "2026-10-22T03:58:34.616Z",
+      "task": "Impulse-Gate Deep Audit: \"JOGA BONITO BRAZIL\"",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "tier": "1M-Context Deep Reasoning",
+      "latency_ms": 3329,
+      "tokens_in": 12800,
+      "tokens_out": 540,
+      "cost_usd": 0.0144,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792641503162_281",
+      "timestamp": "2026-10-22T03:58:23.162Z",
+      "task": "Impulse-Gate Deep Audit: \"JOGA BONITO BRAZIL\"",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "tier": "1M-Context Deep Reasoning",
+      "latency_ms": 2590,
+      "tokens_in": 12800,
+      "tokens_out": 540,
+      "cost_usd": 0.0144,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792641477778_336",
+      "timestamp": "2026-10-22T03:57:57.778Z",
+      "task": "Ingested URL: \"JOGA BONITO BRAZIL\" -> [Life Hacks, Utilities & Reference]",
+      "model": "nvidia/Nemotron-3-Nano-30B-A3B",
+      "tier": "Fast Structured Extraction",
+      "latency_ms": 410,
+      "tokens_in": 1450,
+      "tokens_out": 290,
+      "cost_usd": 0.00024,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792633679979",
+      "timestamp": "2026-10-22T01:47:59.979Z",
+      "task": "Nebius Serverless Job: Polled 12 Wishlist Items & Verified 1397 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 383,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792597370025",
+      "timestamp": "2026-10-21T15:42:50.025Z",
+      "task": "Nebius Serverless Job: Polled 12 Wishlist Items & Verified 1397 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 355,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792595692181",
+      "timestamp": "2026-10-21T15:14:52.181Z",
+      "task": "Nebius Serverless Job: Polled 12 Wishlist Items & Verified 1397 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 358,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792591003365",
+      "timestamp": "2026-10-21T13:56:43.365Z",
+      "task": "Nebius Serverless Job: Polled 12 Wishlist Items & Verified 1397 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 351,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792541311630_524",
+      "timestamp": "2026-10-21T00:08:31.630Z",
+      "task": "Impulse-Gate Deep Audit: \"Acqua di Parma Colonia Essenza Eau de Cologne (1\"",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "tier": "1M-Context Deep Reasoning",
+      "latency_ms": 2375,
+      "tokens_in": 12800,
+      "tokens_out": 540,
+      "cost_usd": 0.0144,
+      "status": "SUCCESS"
+    },
+    {
+      "id": "tel_1792536400645",
+      "timestamp": "2026-10-20T22:46:40.646Z",
+      "task": "Nebius Serverless Job: Polled 12 Wishlist Items & Verified 1397 Bookmarks",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B",
+      "tier": "Nebius Serverless Background Job",
+      "latency_ms": 350,
+      "tokens_in": 28400,
+      "tokens_out": 1120,
+      "cost_usd": 0.0317,
+      "status": "SUCCESS"
+    },
     {
       "id": "tel_1792536280423",
       "timestamp": "2026-10-20T22:44:40.423Z",
@@ -720,6 +928,90 @@
     }
   ],
   "bookmarks": [
+    {
+      "id": "bm_1398",
+      "title": "JOGA BONITO BRAZIL",
+      "url": "https://shopjogabonito.com/cdn/shop/files/JOGA_ECCOM_218002_1.jpg?v=1780271360&width=800",
+      "domain": "shopjogabonito.com",
+      "original_folder": "Ingest Studio (URL)",
+      "browser": "Stashov Ingest",
+      "category": "Life Hacks, Utilities & Reference",
+      "subcategory": "General Reference",
+      "item_type": "bookmark",
+      "tags": [
+        "general",
+        "url",
+        "archived"
+      ],
+      "snapshot_status": "Archived Local Snapshot",
+      "rot_status": "Live & Verified",
+      "embedding": [
+        0,
+        0,
+        0,
+        0,
+        0.1741,
+        0.1741,
+        -0.087,
+        0.087,
+        0,
+        0,
+        0,
+        -0.087,
+        0,
+        0.5222,
+        0.1741,
+        0,
+        0,
+        0,
+        0,
+        0.1741,
+        -0.3482,
+        -0.2611,
+        0,
+        0,
+        0,
+        0,
+        -0.1741,
+        0.087,
+        0.087,
+        -0.087,
+        0,
+        0.1741,
+        0,
+        0,
+        0,
+        0,
+        -0.1741,
+        0,
+        0,
+        -0.087,
+        0,
+        0,
+        0,
+        -0.1741,
+        0,
+        0,
+        0.1741,
+        -0.3482,
+        0,
+        0.087,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -0.2611,
+        0,
+        0,
+        0,
+        0.087,
+        0,
+        -0.087
+      ]
+    },
     {
       "id": "bm_0001",
       "title": "morioh.com",
@@ -117050,22 +117342,29 @@
     }
   ],
   "last_digest": {
-    "job_id": "nebius_job_1792536280422",
-    "executed_at": "2026-10-20T22:44:40.422Z",
-    "duration_ms": 350,
+    "job_id": "nebius_job_1792683242424",
+    "executed_at": "2026-10-22T15:34:02.424Z",
+    "duration_ms": 359,
     "models_invoked": [
       "nvidia/Nemotron-3-Nano-30B-A3B (Deal Schema Extraction)",
       "Qwen/Qwen3-Embedding-8B (Cross-Link Index)",
       "nvidia/Nemotron-3-Ultra-550b-a55b (Weekly Digest & Routine Audit)"
     ],
     "stats": {
-      "total_bookmarks_verified": 1397,
-      "wishlist_items_polled": 12,
+      "total_bookmarks_verified": 1398,
+      "wishlist_items_polled": 13,
       "cooling_off_cleared": 6,
       "remaining_monthly_budget": 215,
       "approved_buys_count": 6
     },
     "top_deal_alerts": [
+      {
+        "title": "JOGA BONITO BRAZIL",
+        "retail": 80,
+        "floor": 54.4,
+        "savings": 25.6,
+        "source": "Discounter / Verified Resale Floor"
+      },
       {
         "title": "Acqua di Parma Colonia Essenza Eau de Cologne (100ml)",
         "retail": 195,
@@ -117086,13 +117385,6 @@
         "floor": 159,
         "savings": 40,
         "source": "Thursday Warehouse / Factory Seconds"
-      },
-      {
-        "title": "BYREDO Eau de Parfum 50ml (Bal d'Afrique / Mojave Ghost)",
-        "retail": 225,
-        "floor": 148,
-        "savings": 77,
-        "source": "Olfactory Factory LLC / AuraFragrance / Luckyscent Sample First"
       }
     ],
     "routine_conflicts_blocked": [

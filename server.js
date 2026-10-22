@@ -3,15 +3,19 @@
  * Nebius x NVIDIA Global AI Hackathon (Personal AI Track)
  */
 
+require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { syncBrowserBookmarks, classifyBookmark, deterministicVec } = require('./scripts/sync-bookmarks');
 const { runServerlessJob } = require('./jobs/nebius-serverless-worker');
+const { resolveImage, IMAGE_DIR, BUNDLED_IMAGE_DIR, ensureImageDir } = require('./lib/image-cache');
+const { loadSections, createSection, updateSection, deleteSection, reorderSections } = require('./lib/sections');
+const { readyVault, readySections, readVault, writeVault, readImage } = require('./lib/state');
 
 const PORT = Number(process.env.PORT || 3847);
-const VAULT_PATH = path.join(__dirname, 'data', 'vault.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
+ensureImageDir();
 
 const NEBIUS_BASE_URL = (process.env.NEBIUS_BASE_URL || 'https://api.tokenfactory.nebius.com/v1').replace(/\/$/, '');
 const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY || '';
@@ -26,11 +30,11 @@ const MODELS = {
 };
 
 function loadVault() {
-  return JSON.parse(fs.readFileSync(VAULT_PATH, 'utf8'));
+  return readVault();
 }
 
-function saveVault(vault) {
-  fs.writeFileSync(VAULT_PATH, JSON.stringify(vault, null, 2), 'utf8');
+async function saveVault(vault) {
+  return writeVault(vault);
 }
 
 function cosineSim(a, b) {
@@ -104,7 +108,7 @@ function sendJson(res, status, payload) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(payload));
@@ -136,6 +140,9 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
 
   try {
+    if (pathname.startsWith('/api/sections')) await readySections();
+    else if (pathname.startsWith('/api/') && pathname !== '/api/images/resolve') await readyVault();
+
     // 1. GET /api/vault — returns summary + wishlist + protocols + personal_context + telemetry + category counts
     if (req.method === 'GET' && pathname === '/api/vault') {
       const vault = loadVault();
@@ -158,6 +165,71 @@ const server = http.createServer(async (req, res) => {
     }
 
     // 2. GET /api/bookmarks — paginated & filtered bookmarks + hybrid semantic search
+    // 2. Sidebar sections - editable built-ins and persisted custom collections
+    if (req.method === 'GET' && pathname === '/api/sections') {
+      return sendJson(res, 200, loadSections());
+    }
+    if (req.method === 'POST' && pathname === '/api/sections') {
+      const body = await parseBody(req);
+      try {
+        return sendJson(res, 200, { ok: true, section: await createSection(body) });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+    if (req.method === 'POST' && pathname === '/api/sections/reorder') {
+      const body = await parseBody(req);
+      try {
+        return sendJson(res, 200, { ok: true, ...(await reorderSections(body.ids)) });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+    const sectionMatch = pathname.match(/^\/api\/sections\/([a-z0-9_]+)$/i);
+    if (req.method === 'PUT' && sectionMatch) {
+      const body = await parseBody(req);
+      try {
+        return sendJson(res, 200, { ok: true, section: await updateSection(sectionMatch[1], body) });
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+    if (req.method === 'DELETE' && sectionMatch) {
+      try {
+        return sendJson(res, 200, await deleteSection(sectionMatch[1]));
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // 3. Cached product images
+    if (req.method === 'POST' && pathname === '/api/images/resolve') {
+      const body = await parseBody(req);
+      try {
+        const image = await resolveImage(body.url || body.pageUrl, { pageUrl: body.pageUrl });
+        return sendJson(res, 200, { ok: true, image });
+      } catch (err) {
+        return sendJson(res, 422, { error: err.message });
+      }
+    }
+    const wishlistPhotoMatch = pathname.match(/^\/api\/wishlist\/([a-z0-9_]+)\/photo$/i);
+    if (req.method === 'POST' && wishlistPhotoMatch) {
+      const body = await parseBody(req);
+      const vault = loadVault();
+      const item = (vault.wishlist || []).find((wish) => wish.id === wishlistPhotoMatch[1]);
+      if (!item) return sendJson(res, 404, { error: 'Wishlist item not found.' });
+      try {
+        const image = await resolveImage(body.url || item.url, { pageUrl: item.url });
+        item.image = image;
+        item.image_source = body.url || item.url;
+        await saveVault(vault);
+        return sendJson(res, 200, { ok: true, item });
+      } catch (err) {
+        return sendJson(res, 422, { error: err.message });
+      }
+    }
+
+    // 4. GET /api/bookmarks - paginated & filtered bookmarks + hybrid semantic search
     if (req.method === 'GET' && pathname === '/api/bookmarks') {
       const vault = loadVault();
       const category = parsedUrl.searchParams.get('category') || 'ALL';
@@ -204,7 +276,7 @@ const server = http.createServer(async (req, res) => {
           120,
           0.00008
         );
-        saveVault(vault);
+        await saveVault(vault);
       }
 
       const sliced = list.slice(offset, offset + limit).map(({ embedding, ...rest }) => rest);
@@ -230,7 +302,7 @@ const server = http.createServer(async (req, res) => {
         1850,
         0.0013
       );
-      saveVault(vault);
+      await saveVault(vault);
       return sendJson(res, 200, {
         ok: true,
         total_unique: syncRes.total_unique,
@@ -291,6 +363,11 @@ const server = http.createServer(async (req, res) => {
         rot_status: 'Live & Verified',
         embedding: deterministicVec(`${titleInput} ${rawInput} ${category} ${subcategory}`),
       };
+      let resolvedImage = '';
+      if (mode === 'url' && newBookmark.url.startsWith('http')) {
+        try { resolvedImage = await resolveImage(newBookmark.url); } catch (_) {}
+      }
+      newBookmark.image = resolvedImage;
       vault.bookmarks.unshift(newBookmark);
 
       let createdWishlist = null;
@@ -302,6 +379,7 @@ const server = http.createServer(async (req, res) => {
           title: titleInput || rawInput.slice(0, 80),
           brand: newBookmark.domain.split('.')[0].toUpperCase(),
           url: newBookmark.url,
+          image: resolvedImage,
           category,
           retail_price: retail,
           lowest_verified_price: floor,
@@ -332,7 +410,7 @@ const server = http.createServer(async (req, res) => {
         290,
         0.00024
       );
-      saveVault(vault);
+      await saveVault(vault);
 
       return sendJson(res, 200, {
         ok: true,
@@ -395,7 +473,7 @@ const server = http.createServer(async (req, res) => {
         540,
         0.0144
       );
-      saveVault(vault);
+      await saveVault(vault);
 
       return sendJson(res, 200, {
         ok: true,
@@ -418,11 +496,17 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { ok: true, already_exists: true, item: existing });
       }
 
+      let promotedImage = bm.image || '';
+      if (!promotedImage) {
+        try { promotedImage = await resolveImage(bm.url); } catch (_) {}
+      }
+
       const newWl = {
         id: `wl_${Date.now()}`,
         title: bm.title,
         brand: bm.domain.split('.')[0].toUpperCase(),
         url: bm.url,
+        image: promotedImage,
         category: bm.category,
         retail_price: 95.0,
         lowest_verified_price: 62.0,
@@ -451,7 +535,7 @@ const server = http.createServer(async (req, res) => {
         310,
         0.00085
       );
-      saveVault(vault);
+      await saveVault(vault);
       return sendJson(res, 200, { ok: true, item: newWl, telemetry: tel });
     }
 
@@ -509,7 +593,7 @@ const server = http.createServer(async (req, res) => {
         1420,
         0.0887
       );
-      saveVault(vault);
+      await saveVault(vault);
 
       return sendJson(res, 200, {
         ok: true,
@@ -526,6 +610,30 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, report });
     }
 
+    if (pathname.startsWith('/media/images/')) {
+      const fileName = path.basename(pathname);
+      const imagePath = [path.join(IMAGE_DIR, fileName), path.join(BUNDLED_IMAGE_DIR, fileName)]
+        .find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+      const remote = imagePath ? null : await readImage(fileName);
+      if (imagePath || remote) {
+        const mime = imagePath
+          ? {
+              '.avif': 'image/avif',
+              '.gif': 'image/gif',
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.png': 'image/png',
+              '.svg': 'image/svg+xml',
+              '.webp': 'image/webp',
+            }[path.extname(imagePath).toLowerCase()] || 'application/octet-stream'
+          : remote.contentType || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=31536000, immutable' });
+        return res.end(imagePath ? fs.readFileSync(imagePath) : remote.buffer);
+      }
+      res.writeHead(404);
+      return res.end('Not found');
+    }
+
     // Static files
     let filePath = pathname === '/' ? path.join(PUBLIC_DIR, 'index.html') : path.join(PUBLIC_DIR, pathname);
     if (!filePath.startsWith(PUBLIC_DIR)) {
@@ -540,6 +648,7 @@ const server = http.createServer(async (req, res) => {
         '.css': 'text/css; charset=utf-8',
         '.json': 'application/json; charset=utf-8',
         '.svg': 'image/svg+xml',
+        '.woff2': 'font/woff2',
       }[ext] || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': mime });
       return res.end(fs.readFileSync(filePath));
@@ -558,4 +667,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server };
+module.exports = server;
+module.exports.server = server;

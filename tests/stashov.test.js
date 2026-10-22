@@ -10,7 +10,7 @@ test('Vault contains all 1,386 imported browser bookmarks organized across 14 ca
   assert.ok(fs.existsSync(vaultPath), 'vault.json should exist');
   const vault = JSON.parse(fs.readFileSync(vaultPath, 'utf8'));
   assert.ok(vault.bookmarks.length >= 1380, `Expected >=1380 bookmarks, got ${vault.bookmarks.length}`);
-  assert.equal(vault.wishlist.length, 12, 'Should have 12 flagship impulse-gated wishlist items');
+  assert.ok(vault.wishlist.length >= 12, `Should have at least 12 impulse-gated wishlist items, got ${vault.wishlist.length}`);
   assert.equal(vault.protocols.length, 5, 'Should have 5 living protocols');
   assert.ok(vault.personal_context.owned_inventory.length >= 6, 'Should track owned inventory');
 });

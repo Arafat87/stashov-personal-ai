@@ -7,20 +7,14 @@
  *  4. Weekly Personal AI Digest Generator (via Nemotron 3 Ultra 1M-Context)
  */
 
-const fs = require('fs');
-const path = require('path');
-
-const VAULT_PATH = path.join(__dirname, '..', 'data', 'vault.json');
+const { ready, readVault, writeVault } = require('../lib/state');
 
 async function runServerlessJob() {
   const start = Date.now();
   console.log('[Nebius Serverless Job] Starting Stashov Autonomous Vault Maintenance...');
 
-  if (!fs.existsSync(VAULT_PATH)) {
-    throw new Error(`Vault file not found at ${VAULT_PATH}`);
-  }
-
-  const vault = JSON.parse(fs.readFileSync(VAULT_PATH, 'utf8'));
+  await ready();
+  const vault = readVault();
   const wishlist = vault.wishlist || [];
   const bookmarks = vault.bookmarks || [];
   const context = vault.personal_context || {};
@@ -98,7 +92,7 @@ async function runServerlessJob() {
     status: 'SUCCESS',
   });
   vault.last_digest = digestReport;
-  fs.writeFileSync(VAULT_PATH, JSON.stringify(vault, null, 2), 'utf8');
+  await writeVault(vault);
 
   console.log('[Nebius Serverless Job] Completed successfully:', JSON.stringify(digestReport.stats));
   return digestReport;

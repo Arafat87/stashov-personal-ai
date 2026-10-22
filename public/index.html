@@ -1,896 +1,531 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STASHOV — Personal AI Memory & Impulse Gate (Nebius x NVIDIA)</title>
-  <style>
-    :root {
-      --bg: #080b10;
-      --panel: #10151f;
-      --panel-alt: #151c29;
-      --border: #232e42;
-      --text: #eef2f8;
-      --muted: #8f9eb5;
-      --nvidia: #76b900;
-      --nebius: #38bdf8;
-      --amber: #f59e0b;
-      --rose: #f43f5e;
-      --emerald: #10b981;
-      --purple: #a855f7;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
-      background: radial-gradient(circle at top right, #131c2e 0%, var(--bg) 55%);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.5;
-    }
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(8, 11, 16, 0.9);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 28px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .logo-mark {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--nvidia), var(--nebius));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 18px;
-      color: #05080d;
-      box-shadow: 0 0 20px rgba(118, 185, 0, 0.35);
-    }
-    .brand h1 {
-      font-size: 19px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
-    .brand p {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .infra-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-    .pill {
-      font-size: 11.5px;
-      font-weight: 600;
-      padding: 5px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .pill.nvidia { border-color: rgba(118, 185, 0, 0.5); color: #a3e635; }
-    .pill.nebius { border-color: rgba(56, 189, 248, 0.5); color: #7dd3fc; }
-    .pill.budget { border-color: rgba(16, 185, 129, 0.5); color: #6ee7b7; }
-
-    .container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 22px 28px 60px;
-    }
-
-    /* Top KPI Bar */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 14px;
-      margin-bottom: 22px;
-    }
-    .kpi-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 15px 18px;
-    }
-    .kpi-label {
-      font-size: 11.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-    }
-    .kpi-value {
-      font-size: 24px;
-      font-weight: 800;
-      margin-top: 4px;
-    }
-    .kpi-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 22px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-    }
-    .tab-btn {
-      background: var(--panel);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 9px 16px;
-      border-radius: 9px;
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .tab-btn:hover {
-      color: var(--text);
-      border-color: #3b4d6e;
-    }
-    .tab-btn.active {
-      background: linear-gradient(135deg, rgba(118, 185, 0, 0.2), rgba(56, 189, 248, 0.2));
-      color: #fff;
-      border-color: var(--nvidia);
-    }
-
-    .view-section { display: none; }
-    .view-section.active { display: block; }
-
-    /* Cards & Grids */
-    .section-header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .section-header h2 {
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .btn {
-      background: var(--nvidia);
-      color: #06090e;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .btn:hover { opacity: 0.9; }
-    .btn.secondary {
-      background: var(--panel-alt);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn.nebius-btn {
-      background: var(--nebius);
-      color: #041019;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 11px;
-    }
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 6px;
-      white-space: nowrap;
-    }
-    .badge.green { background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
-    .badge.amber { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
-    .badge.rose { background: rgba(244, 63, 94, 0.16); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
-    .badge.blue { background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
-
-    .price-row {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      background: var(--panel-alt);
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .price-floor { font-size: 20px; font-weight: 800; color: #34d399; }
-    .price-retail { font-size: 13px; color: var(--muted); text-decoration: line-through; }
-    .price-cpu { font-size: 12px; color: #7dd3fc; margin-left: auto; }
-
-    .meta-box {
-      font-size: 12.5px;
-      background: rgba(255, 255, 255, 0.02);
-      border-left: 3px solid var(--nebius);
-      padding: 8px 10px;
-      color: #cbd5e1;
-    }
-    .meta-box.warn { border-left-color: var(--rose); }
-    .meta-box.dupe { border-left-color: var(--nvidia); }
-
-    /* Bookmark Explorer Layout */
-    .explorer-layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 18px;
-    }
-    @media (max-width: 900px) {
-      .explorer-layout { grid-template-columns: 1fr; }
-    }
-    .cat-sidebar {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 760px;
-      overflow-y: auto;
-    }
-    .cat-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 11px;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-      color: var(--muted);
-      border: 1px solid transparent;
-    }
-    .cat-item:hover { background: var(--panel-alt); color: var(--text); }
-    .cat-item.active {
-      background: rgba(118, 185, 0, 0.14);
-      color: #fff;
-      border-color: rgba(118, 185, 0, 0.45);
-      font-weight: 600;
-    }
-    .cat-count {
-      font-size: 11px;
-      background: var(--panel-alt);
-      padding: 2px 7px;
-      border-radius: 99px;
-      color: var(--text);
-    }
-
-    .search-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    input, select, textarea {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 10px 13px;
-      border-radius: 8px;
-      font-size: 13.5px;
-      width: 100%;
-    }
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: var(--nebius);
-    }
-
-    .bm-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .bm-table th, .bm-table td {
-      padding: 11px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .bm-table th {
-      background: var(--panel-alt);
-      color: var(--muted);
-      font-size: 11.5px;
-      text-transform: uppercase;
-    }
-    .bm-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
-    .bm-link { color: #7dd3fc; text-decoration: none; font-weight: 600; }
-    .bm-link:hover { text-decoration: underline; }
-
-    .terminal-box {
-      background: #05070b;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12.5px;
-      white-space: pre-wrap;
-      color: #d1fae5;
-      max-height: 440px;
-      overflow-y: auto;
-    }
-    .tag {
-      display: inline-block;
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 5px;
-      background: var(--panel-alt);
-      color: var(--muted);
-      margin-right: 4px;
-      margin-top: 3px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#05070b" />
+<meta name="description" content="Stashov — a private, context-aware personal AI memory vault and impulse gate running on Nebius Token Factory and NVIDIA Nemotron." />
+<title>STASHOV — Neural Vault Command Deck</title>
+<link rel="preload" href="/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/instrument-serif-italic-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/views.css" />
+<link rel="stylesheet" href="/overlays.css" />
+<script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <div class="logo-mark">S</div>
-      <div>
-        <h1>STASHOV — Personal AI Memory & Impulse Gate</h1>
-        <p>Nebius Token Factory + NVIDIA Nemotron 3 Ultra / Super / Nano • Personal AI Track</p>
+<svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-deck" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></symbol>
+<symbol id="i-vault" viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H20v14H6.5A2.5 2.5 0 0 1 4 16.5z"/><path d="M4 7.5V6a2 2 0 0 1 2-2h11"/><circle cx="15" cy="12" r="2.4"/><path d="M15 9.6V8.2M15 15.8v-1.4M12.6 12H11M19 12h-1.6"/></symbol>
+<symbol id="i-gate" viewBox="0 0 24 24"><path d="M12 3.2 4.6 6v6.2c0 4.5 3.2 7.4 7.4 8.6 4.2-1.2 7.4-4.1 7.4-8.6V6z"/><path d="m8.7 12.1 2.2 2.2 4.4-4.6"/></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h3.4l2.2-6 4 12 2.5-6H21"/></symbol>
+<symbol id="i-fingerprint" viewBox="0 0 24 24"><path d="M12 11.2a1.8 1.8 0 0 1 1.8 1.8c0 2-.4 4.2-.9 5.8"/><path d="M8.4 13a3.6 3.6 0 0 1 7.2 0c0 2.2-.5 4.7-1.2 6.6"/><path d="M5.2 11.4a6.8 6.8 0 0 1 13.6 0c0 1.5-.1 3-.4 4.4"/><path d="M12 5.2a9.4 9.4 0 0 1 9.2 7.6"/><path d="M3.1 14.8a9.5 9.5 0 0 1-.3-2.4"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z"/><path d="M18.5 16.5 19 18l1.5.5-1.5.5-.5 1.5-.5-1.5L16.5 19l1.5-.5z"/></symbol>
+<symbol id="i-router" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2.2"/><rect x="9.8" y="9.8" width="4.4" height="4.4" rx="1"/><path d="M9 2.8v2.4M15 2.8v2.4M9 18.8v2.4M15 18.8v2.4M2.8 9h2.4M2.8 15h2.4M18.8 9h2.4M18.8 15h2.4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m15.6 15.6 4.6 4.6"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4.5 12h14.2M13.2 6.5 18.7 12l-5.5 5.5"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24"><path d="M7 17 17 7M8.5 7H17v8.5"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5.5 12.5 4 4 9-9"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 3.2 19.4h17.6z"/><path d="M12 9v4.4M12 16.6v.2"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.8"/></symbol>
+<symbol id="i-command" viewBox="0 0 24 24"><path d="M9 9h6v6H9z"/><path d="M9 9V6.2A2.2 2.2 0 1 0 6.8 9H9M15 9V6.2A2.2 2.2 0 1 1 17.2 9H15M9 15v2.8A2.2 2.2 0 1 1 6.8 15H9M15 15v2.8a2.2 2.2 0 1 0 2.2-2.8H15"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 9A8 8 0 0 0 6 6.4L4 8.5"/><path d="M4.5 15A8 8 0 0 0 18 17.6l2-2.1"/><path d="M4 4.5v4h4M20 19.5v-4h-4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M12 14v2.5"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="m14.5 5.5 4 4M4.5 19.5l4.4-1 9.8-9.8a2.8 2.8 0 0 0-4-4L4.9 14.5z"/><path d="M13.5 6.5l4 4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9 7V4.5h6V7M6.5 7l.8 12.2a1.8 1.8 0 0 0 1.8 1.6h5.8a1.8 1.8 0 0 0 1.8-1.6L17.5 7M10 11v6M14 11v6"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="9" cy="10" r="1.8"/><path d="m5.5 17 5.2-5.2 3.2 3.2 2.1-2.1 3.5 3.5"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.5-6.4 9.2-6.4S21.2 12 21.2 12s-3.5 6.4-9.2 6.4S2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+</svg>
+<div class="bg" aria-hidden="true">
+<div class="bg-aurora a1"></div><div class="bg-aurora a2"></div><div class="bg-aurora a3"></div>
+<div class="bg-grid"></div><div class="bg-noise"></div>
+</div>
+<div class="cursor-glow" aria-hidden="true"></div>
+<aside class="rail">
+<a class="brand-mark" href="#deck" aria-label="Stashov home"><span>S</span></a>
+<nav class="rail-nav" role="tablist" aria-label="Vault sections">
+<button class="rail-btn" id="tab-deck" data-tab="deck" role="tab" aria-selected="true" aria-controls="panel-deck"><svg class="icon"><use href="#i-deck"/></svg><span>Deck</span></button>
+<button class="rail-btn" id="tab-vault" data-tab="vault" role="tab" aria-selected="false" aria-controls="panel-vault"><svg class="icon"><use href="#i-vault"/></svg><span>Vault</span></button>
+<button class="rail-btn" id="tab-wishlist" data-tab="wishlist" role="tab" aria-selected="false" aria-controls="panel-wishlist"><svg class="icon"><use href="#i-gate"/></svg><span>Gate</span></button>
+<button class="rail-btn" id="tab-protocols" data-tab="protocols" role="tab" aria-selected="false" aria-controls="panel-protocols"><svg class="icon"><use href="#i-pulse"/></svg><span>Rules</span></button>
+<button class="rail-btn" id="tab-context" data-tab="context" role="tab" aria-selected="false" aria-controls="panel-context"><svg class="icon"><use href="#i-fingerprint"/></svg><span>You</span></button>
+<button class="rail-btn" id="tab-ingest" data-tab="ingest" role="tab" aria-selected="false" aria-controls="panel-ingest"><svg class="icon"><use href="#i-spark"/></svg><span>Capture</span></button>
+<button class="rail-btn" id="tab-router" data-tab="router" role="tab" aria-selected="false" aria-controls="panel-router"><svg class="icon"><use href="#i-router"/></svg><span>Router</span></button>
+</nav>
+<div class="rail-foot"><i class="signal-dot"></i><span>SYS<br>ONLINE</span></div>
+</aside>
+<div class="shell">
+<header class="topbar">
+<div class="topbar-left">
+<span class="route-tag">STASHOV // <b id="pageTitle">COMMAND DECK</b></span>
+<span class="mode-pill" id="modePill"><i></i> CONNECTING</span>
+</div>
+<div class="topbar-right">
+<div class="budget-mini"><span>FUN-MONEY</span><strong id="topBudget">$—</strong></div>
+        <span class="clock" id="clock">--:--:--</span>
+        <button class="palette-btn" id="customizeBtn" aria-label="Customize sidebar sections" aria-haspopup="dialog" aria-controls="sectionsDialog"><svg class="icon"><use href="#i-edit"/></svg><span>Customize</span></button>
+        <button class="palette-btn" id="paletteBtn" aria-label="Open command palette" aria-haspopup="dialog" aria-controls="paletteDialog"><svg class="icon"><use href="#i-command"/></svg><span>Command</span><kbd id="paletteKbd">Ctrl K</kbd></button>
+</div>
+</header>
+<main id="main">
+<section class="panel is-active" id="panel-deck" role="tabpanel" aria-labelledby="tab-deck" tabindex="0">
+  <div class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">PRIVATE MEMORY INTELLIGENCE / NYC</p>
+      <h1 class="hero-title"><span class="glitch" data-text="STASHOV">STASHOV</span><span class="hero-script">neural vault</span></h1>
+      <p class="hero-lede">Your bookmarks, wishlist, routines and hard limits, fused into one private brain. It remembers what you already own, what conflicts with your stack, and what you were about to buy on impulse.</p>
+      <div class="hero-actions">
+        <button class="btn" data-goto="vault">Enter the vault <svg class="icon"><use href="#i-arrow"/></svg></button>
+        <button class="btn ghost" data-goto="wishlist"><svg class="icon"><use href="#i-gate"/></svg> Open the impulse gate</button>
+        <button class="btn quiet" data-goto="ingest"><svg class="icon"><use href="#i-plus"/></svg> Capture a signal</button>
+      </div>
+      <dl class="hero-stats">
+        <div><dt>Signals indexed</dt><dd id="heroVaultCount">0</dd></div>
+        <div class="is-accent"><dt>Markup caught</dt><dd id="heroSavings">$0</dd></div>
+        <div><dt>Items gated</dt><dd id="heroGated">0</dd></div>
+      </dl>
+    </div>
+    <div class="core-wrap" aria-hidden="true">
+      <div class="core">
+        <div class="core-ring r1"></div>
+        <div class="core-ring r2"></div>
+        <div class="core-ring r3"></div>
+        <div class="core-sphere"><span>S</span><i class="core-scan"></i></div>
+        <span class="core-tag tag-1">Nemotron 3 Ultra</span>
+        <span class="core-tag tag-2">1M context</span>
+        <span class="core-tag tag-3">Qwen embeddings</span>
+        <span class="core-tag tag-4">Impulse gate</span>
+        <div class="core-readout"><span>MEMORY CORE</span><b>ONLINE</b><span class="core-bars"><i></i><i></i><i></i><i></i></span></div>
       </div>
     </div>
-    <div class="infra-pills">
-      <span class="pill nvidia" id="modelTierPill">NVIDIA Nemotron 3 Tiered Router: ACTIVE</span>
-      <span class="pill nebius" id="bookmarksSyncPill">1,386 Browser Bookmarks Categorized</span>
-      <span class="pill budget" id="budgetHeaderPill">Fun-Money Remaining: $215.00 / $300.00</span>
-    </div>
-  </header>
-
-  <div class="container">
-    <!-- Top KPIs -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Browser Bookmarks Organized</div>
-        <div class="kpi-value" id="kpiTotalBookmarks">1,386</div>
-        <div class="kpi-sub" id="kpiBrowsersSynced">Chrome (1,197) + Brave (799) • 14 Categories</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Impulse-Gated Wishlist</div>
-        <div class="kpi-value" id="kpiWishlistCount">12</div>
-        <div class="kpi-sub">3 Approved • 4 Discounter • 5 Blocked/Cooling</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">October Fun-Money Cap</div>
-        <div class="kpi-value" style="color:#34d399" id="kpiBudgetLeft">$215.00</div>
-        <div class="kpi-sub">$85.00 spent of $300.00 cap • 6 Owned Items Tracked</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Living Protocols & Guardrails</div>
-        <div class="kpi-value" id="kpiProtocolsCount">5</div>
-        <div class="kpi-sub">AM/PM Skincare, Energy Stack, Peptide & Fragrance Rules</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Discounter & Dupe Savings</div>
-        <div class="kpi-value" style="color:#7dd3fc">$2,864</div>
-        <div class="kpi-sub">Identified across Retail vs Discounters & Dupes</div>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('bookmarks')">1. Browser Bookmarks Vault (1,386 Categorized)</button>
-      <button class="tab-btn" onclick="switchTab('wishlist')">2. Impulse-Gated Wishlist & Anti-Hype</button>
-      <button class="tab-btn" onclick="switchTab('protocols')">3. Living Playbooks & Routine Conflict Engine</button>
-      <button class="tab-btn" onclick="switchTab('context')">4. My Context, Wardrobe & Budget Memory</button>
-      <button class="tab-btn" onclick="switchTab('ingest')">5. 2-Second Ingest Studio (URL / Screenshot OCR)</button>
-      <button class="tab-btn" onclick="switchTab('router')">6. Nebius Token Factory Router & 1M-Context Audit</button>
-    </div>
-
-    <!-- TAB 1: BROWSER BOOKMARKS VAULT -->
-    <section id="tab-bookmarks" class="view-section active">
-      <div class="section-header">
-        <div>
-          <h2>Categorized Browser Bookmark Vault (Chrome + Brave + Edge)</h2>
-          <p style="font-size:13px;color:var(--muted)">Deduplicated from your real local browser profiles, embedded with Qwen3-Embedding-8B, and sorted into 14 actionable categories.</p>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn secondary" onclick="resyncBookmarks()">Re-Sync Local Browser Bookmarks</button>
-        </div>
-      </div>
-
-      <div class="explorer-layout">
-        <div class="cat-sidebar" id="categorySidebar"></div>
-        <div>
-          <div class="search-bar">
-            <input type="text" id="bmSearchInput" placeholder="Semantic + keyword search across 1,386 bookmarks (e.g., 'arabic perfume', 'soccer jersey', 'peptide', 'cashmere', 'interview')..." onkeydown="if(event.key==='Enter') loadBookmarks()" />
-            <select id="bmBrowserFilter" style="width:170px;" onchange="loadBookmarks()">
-              <option value="ALL">All Browsers</option>
-              <option value="Chrome">Chrome</option>
-              <option value="Brave">Brave</option>
-            </select>
-            <button class="btn nebius-btn" onclick="loadBookmarks()">Search Vault</button>
-          </div>
-          <div style="margin-bottom:10px;font-size:12.5px;color:var(--muted)" id="bmResultStatus">Showing bookmarks...</div>
-          <table class="bm-table">
-            <thead>
-              <tr>
-                <th>Title & Saved Link</th>
-                <th>Category</th>
-                <th>Browser / Original Folder</th>
-                <th>Snapshot & Action</th>
-              </tr>
-            </thead>
-            <tbody id="bmTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 2: IMPULSE-GATED WISHLIST -->
-    <section id="tab-wishlist" class="view-section">
-      <div class="section-header">
-        <div>
-          <h2>Smart Buyer & Impulse-Gated Wishlist</h2>
-          <p style="font-size:13px;color:var(--muted)">Every item is checked against your Owned Inventory, $300 Monthly Cap, Routine Conflicts, Discounter Floors, and a 14-Day Cooling-Off Lock.</p>
-        </div>
-      </div>
-      <div id="impulseAuditModal" style="display:none;margin-bottom:18px;">
-        <div class="terminal-box" id="impulseAuditOutput"></div>
-      </div>
-      <div class="cards-grid" id="wishlistGrid"></div>
-    </section>
-
-    <!-- TAB 3: LIVING PLAYBOOKS & ROUTINES -->
-    <section id="tab-protocols" class="view-section">
-      <div class="section-header">
-        <div>
-          <h2>Living Playbooks & Routine Conflict Detector</h2>
-          <p style="font-size:13px;color:var(--muted)">Turns static "life hack" bookmarks into active Morning/Evening protocols and blocks conflicting skincare/supplement purchases.</p>
-        </div>
-      </div>
-      <div class="cards-grid" id="protocolsGrid"></div>
-    </section>
-
-    <!-- TAB 4: MY CONTEXT & OWNED INVENTORY -->
-    <section id="tab-context" class="view-section">
-      <div class="section-header">
-        <div>
-          <h2>Personal Context, Owned Inventory & Constraints Memory</h2>
-          <p style="font-size:13px;color:var(--muted)">Why Stashov runs on private, self-hosted open-weight models: your personal budget, closet inventory, sizes, and health guardrails stay yours.</p>
-        </div>
-      </div>
-      <div class="cards-grid" id="contextGrid"></div>
-    </section>
-
-    <!-- TAB 5: INGEST STUDIO -->
-    <section id="tab-ingest" class="view-section">
-      <div class="section-header">
-        <div>
-          <h2>2-Second Frictionless Ingest Studio (Link, Screenshot OCR, or Life Hack)</h2>
-          <p style="font-size:13px;color:var(--muted)">Routes screenshots to Vision OCR (GLM-5.3-Flash / Qwen3.8-27B) and URLs/transcripts to Nemotron Nano, auto-categorizing and checking for routine/closet conflicts.</p>
-        </div>
-      </div>
-      <div class="card" style="max-width:760px;">
-        <label style="font-size:13px;font-weight:600;">Capture Mode</label>
-        <select id="ingestMode">
-          <option value="url">Web / Social Link (TikTok, X, YouTube, Store URL)</option>
-          <option value="screenshot">Camera-Roll Price Tag / Post Screenshot OCR</option>
-          <option value="note">Life-Hack Note / Routine Step</option>
-        </select>
-        <label style="font-size:13px;font-weight:600;">Item Title / Product Name / Hack Headline</label>
-        <input type="text" id="ingestTitle" placeholder="e.g., The Ordinary Glycolic Acid 7% Toning Solution OR Oversized Charcoal Hoodie" />
-        <label style="font-size:13px;font-weight:600;">URL, Raw Screenshot Text, or Transcript Excerpt</label>
-        <textarea id="ingestInput" rows="4" placeholder="Paste URL or drop screenshot text..."></textarea>
-        <label style="font-size:13px;font-weight:600;">Retail Price ($ USD — optional for Wishlist items)</label>
-        <input type="number" id="ingestPrice" placeholder="e.g., 45" />
-        <button class="btn" onclick="submitIngest()">Ingest, Auto-Categorize & Run Impulse Gate</button>
-        <div id="ingestResultBox" style="margin-top:10px;display:none;" class="terminal-box"></div>
-      </div>
-    </section>
-
-    <!-- TAB 6: NEBIUS TOKEN FACTORY ROUTER & 1M-CONTEXT VAULT AUDIT -->
-    <section id="tab-router" class="view-section">
-      <div class="section-header">
-        <div>
-          <h2>Nebius Token Factory Multi-Model Router & 1M-Context Vault Auditor</h2>
-          <p style="font-size:13px;color:var(--muted)">Live telemetry across Nemotron 3 Ultra (1M context), Super, Nano, Vision, and Qwen3-Embedding-8B + Nebius Serverless Jobs.</p>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn nebius-btn" onclick="triggerServerlessJob()">Run Nebius Serverless Job Poller Now</button>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:18px;">
-        <h3 style="font-size:15px;">Ask Nemotron 3 Ultra (1M-Context) Across Your Entire 1,386-Item Vault</h3>
-        <div class="search-bar" style="margin-top:8px;margin-bottom:8px;">
-          <input type="text" id="vaultAuditInput" value="Audit my 1,386 bookmarks, wishlist, owned wardrobe, and skincare stack: what should I buy, skip, or consolidate?" />
-          <button class="btn" onclick="runVaultAudit()">Run 1M-Context Synthesis</button>
-        </div>
-        <div class="terminal-box" id="vaultAuditOutput">Click "Run 1M-Context Synthesis" or "Run Nebius Serverless Job Poller Now" to execute...</div>
-      </div>
-
-      <h3 style="font-size:15px;margin-bottom:10px;">Live Nebius Token Factory Routing Telemetry</h3>
-      <table class="bm-table">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Task & Workflow Step</th>
-            <th>Routed Model on Token Factory</th>
-            <th>Tier</th>
-            <th>Latency</th>
-            <th>Tokens (In/Out)</th>
-            <th>Est. Cost</th>
-          </tr>
-        </thead>
-        <tbody id="telemetryTableBody"></tbody>
-      </table>
-    </section>
   </div>
 
-  <script>
-    let vaultData = null;
-    let selectedCategory = 'ALL';
+  <div class="ticker" aria-hidden="true"><div class="ticker-track" id="tickerTrack"></div></div>
 
-    function switchTab(tabId) {
-      document.querySelectorAll('.view-section').forEach((s) => s.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      document.getElementById('tab-' + tabId).classList.add('active');
-      const idxMap = { bookmarks: 0, wishlist: 1, protocols: 2, context: 3, ingest: 4, router: 5 };
-      document.querySelectorAll('.tab-btn')[idxMap[tabId]].classList.add('active');
-    }
+  <div class="bento">
+    <article class="panel-card budget-card reveal">
+      <header><span>Budget envelope</span><span class="micro" id="budgetMonth">OCT 2026</span></header>
+      <div class="ring-wrap">
+        <svg class="ring-svg" viewBox="0 0 160 160" role="img" aria-label="Monthly budget remaining">
+          <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color: var(--lime)"/><stop offset="1" style="stop-color: var(--cyan)"/></linearGradient></defs>
+          <circle class="ring-bg" cx="80" cy="80" r="66"/>
+          <circle class="ring-fg" id="budgetRingArc" cx="80" cy="80" r="66"/>
+        </svg>
+        <div class="ring-center"><strong id="ovRemaining">$—</strong><span>left to spend</span></div>
+      </div>
+      <div class="budget-meta"><span>Spent <b id="ovSpent">$—</b></span><span>Cap <b id="ovCap">$—</b></span></div>
+      <p class="card-note">Anything above this line has to survive a 14-day cooldown.</p>
+    </article>
 
-    async function initApp() {
-      const res = await fetch('/api/vault');
-      vaultData = await res.json();
-      renderHeaderAndKpis();
-      renderCategorySidebar();
-      renderWishlist();
-      renderProtocols();
-      renderContext();
-      renderTelemetry();
-      await loadBookmarks();
-    }
+    <article class="panel-card index-card reveal">
+      <header><span>Memory index</span><span class="micro" id="ovClusterCount">— clusters</span></header>
+      <div class="index-number"><strong class="mega" id="ovBookmarkCount">0</strong><span>signals<br>mapped</span></div>
+      <div id="catBars" class="mini-bars"></div>
+      <div class="browser-meta" id="browserMeta">Indexing browser profiles…</div>
+    </article>
 
-    function renderHeaderAndKpis() {
-      const ctx = vaultData.personal_context || {};
-      const rem = (ctx.monthly_discretionary_budget || 300) - (ctx.spent_this_month || 0);
-      document.getElementById('kpiTotalBookmarks').textContent = (vaultData.total_bookmarks || 0).toLocaleString();
-      document.getElementById('bookmarksSyncPill').textContent = `${(vaultData.total_bookmarks || 0).toLocaleString()} Browser Bookmarks Categorized`;
-      document.getElementById('budgetHeaderPill').textContent = `Fun-Money Remaining: $${rem.toFixed(2)} / $${(ctx.monthly_discretionary_budget || 300).toFixed(2)}`;
-      document.getElementById('kpiBudgetLeft').textContent = `$${rem.toFixed(2)}`;
-      document.getElementById('kpiWishlistCount').textContent = (vaultData.wishlist || []).length;
-      document.getElementById('kpiProtocolsCount').textContent = (vaultData.protocols || []).length;
-    }
+    <article class="panel-card verdict-card reveal">
+      <header><span>Gate verdicts</span><span class="micro">THIS MONTH</span></header>
+      <div class="verdict-seg" id="verdictSeg" aria-hidden="true"></div>
+      <ul class="verdict-legend" id="verdictLegend"></ul>
+      <p class="card-note" id="verdictNote">Every save is checked before it becomes a purchase.</p>
+    </article>
 
-    function renderCategorySidebar() {
-      const sb = document.getElementById('categorySidebar');
-      const counts = vaultData.category_counts || {};
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    <article class="panel-card digest-card reveal">
+      <header><span>Last night's digest</span><span class="micro" id="digestStamp">AWAITING SYNC</span></header>
+      <div class="digest-stats" id="digestStats"></div>
+      <ul class="deal-list" id="digestDeals"></ul>
+      <div class="card-actions"><button class="btn ghost sm" data-goto="wishlist">Open the gate <svg class="icon"><use href="#i-arrow"/></svg></button><button class="btn quiet sm" id="deckJobBtn"><svg class="icon"><use href="#i-refresh"/></svg> Run nightly job</button></div>
+    </article>
 
-      let html = `
-        <div class="cat-item ${selectedCategory === 'ALL' ? 'active' : ''}" onclick="selectCategory('ALL')">
-          <span>All Categorized Bookmarks</span>
-          <span class="cat-count">${vaultData.total_bookmarks || 0}</span>
+    <article class="panel-card feed-card reveal">
+      <header><span>Router feed</span><span class="live-label"><i></i>LIVE</span></header>
+      <ul class="signal-feed" id="quickSignals"></ul>
+      <div class="card-actions"><button class="btn quiet sm" data-goto="router">Full telemetry <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+    </article>
+  </div>
+</section>
+<section class="panel" id="panel-vault" role="tabpanel" aria-labelledby="tab-vault" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">01 / SIGNAL INDEX</p>
+      <h2><span id="vaultHeadCount">1,397</span> saved links.<br><em>Zero lost.</em></h2>
+      <p class="lede">Chrome, Brave and Edge bookmarks, deduplicated, embedded, and sorted into fourteen clusters. Search by memory instead of folder archaeology.</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn ghost" id="syncBtn"><svg class="icon"><use href="#i-refresh"/></svg> Sync browsers</button>
+    </div>
+  </div>
+
+  <div class="vault-toolbar reveal">
+    <div class="search-field">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="text" id="bmSearchInput" autocomplete="off" placeholder="Search by meaning — 'arabic perfume', 'peptide COA', 'interview'…" aria-label="Semantic search across bookmarks" />
+      <kbd>/</kbd>
+    </div>
+    <div class="select-wrap">
+      <select id="bmBrowserFilter" aria-label="Filter by browser">
+        <option value="ALL">All browsers</option>
+        <option value="Chrome">Chrome</option>
+        <option value="Brave">Brave</option>
+        <option value="Edge">Edge</option>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </div>
+    <button class="btn" id="bmSearchBtn">Run query</button>
+  </div>
+
+  <section class="cluster-board reveal" aria-labelledby="clusterTitle">
+    <header class="cluster-head">
+      <div><p class="micro">SHOP BY CLUSTER</p><h3 id="clusterTitle">The things you want, sorted by what they are.</h3></div>
+      <div class="cluster-tools">
+        <span class="micro" id="catPanelCount">-</span>
+        <button type="button" class="filter-chip" id="allClustersBtn">All signals <b id="clusterAllCount">0</b></button>
+      </div>
+    </header>
+    <div id="clusterGrid" class="cluster-grid" role="group" aria-label="Filter signals by cluster"></div>
+  </section>
+
+  <div class="vault-main">
+    <div class="results-bar"><p id="bmCount" aria-live="polite">Loading signals.</p><span class="mono" id="activeFilter"></span></div>
+    <div id="bmGrid" class="signal-grid" aria-busy="true"></div>
+    <div class="load-more-wrap"><button class="btn ghost" id="loadMoreBtn" hidden>Load more signals <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+  </div>
+</section>
+
+<section class="panel" id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">02 / IMPULSE GATE</p>
+      <h2>Nothing gets bought<br><em>on impulse.</em></h2>
+      <p class="lede">Each wish is checked against what you already own, your routine, the price floor, and a fourteen-day cooling lock. The AI argues against the purchase by default.</p>
+    </div>
+    <div class="head-actions"><button class="btn quiet" id="gateOracleBtn" data-goto="router"><svg class="icon"><use href="#i-spark"/></svg> Ask the oracle</button></div>
+  </div>
+
+  <div class="gate-strip reveal">
+    <div class="gate-budget">
+      <span class="micro">October fun-money remaining</span>
+      <strong id="wlRemaining">$—</strong>
+      <div class="gate-rail"><i id="wlRailFill"></i></div>
+      <small id="wlSpentNote">— spent of — cap</small>
+    </div>
+    <div class="gate-rules">
+      <span class="rule-chip"><svg class="icon"><use href="#i-lock"/></svg>14-day cooldown</span>
+      <span class="rule-chip"><svg class="icon"><use href="#i-check"/></svg>Owned-closet check</span>
+      <span class="rule-chip"><svg class="icon"><use href="#i-coin"/></svg>Discounter floor</span>
+      <span class="rule-chip"><svg class="icon"><use href="#i-alert"/></svg>Routine safety</span>
+    </div>
+  </div>
+
+  <div class="filter-row reveal" id="verdictFilters" role="group" aria-label="Filter wishlist by verdict"></div>
+  <div id="wishlistGrid" class="wish-grid"></div>
+</section>
+
+<section class="panel" id="panel-protocols" role="tabpanel" aria-labelledby="tab-protocols" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">03 / LIVING PLAYBOOKS</p>
+      <h2>Static hacks become<br><em>living rules.</em></h2>
+      <p class="lede">Your saved threads are compiled into active protocols. When a new purchase, supplement or habit collides with one, the vault blocks it before checkout.</p>
+    </div>
+    <div class="head-actions"><span class="status-chip"><i></i><span id="protocolCount">—</span> protocols armed</span></div>
+  </div>
+  <div id="protocolsGrid" class="protocol-grid"></div>
+</section>
+
+<section class="panel" id="panel-context" role="tabpanel" aria-labelledby="tab-context" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">04 / IDENTITY BUFFER</p>
+      <h2>The AI that knows<br><em>you.</em></h2>
+      <p class="lede">Your sizes, your closet, your skin barrier, your budget, your scent profile. Stored in your own vault, used only to make the gate smarter.</p>
+    </div>
+  </div>
+  <div class="context-grid">
+    <article class="profile-card glass reveal">
+      <div class="profile-top">
+        <div class="avatar" aria-hidden="true"><span id="profileInitials">AS</span></div>
+        <div class="profile-id"><span class="micro">VAULT OWNER</span><h3 id="profileName">—</h3><p id="profileLocation">—</p></div>
+      </div>
+      <div class="profile-budget"><span class="micro">Month cap</span><strong id="profileBudget">$—</strong><span id="profileBudgetSub">— left</span></div>
+      <div class="dossier" id="profileSizes"></div>
+    </article>
+
+    <article class="rules-card glass reveal">
+      <header class="panel-head"><span class="micro">HARD CONSTRAINTS</span><span class="badge-soft danger">ENFORCED</span></header>
+      <h3>Things the gate will not let you forget.</h3>
+      <ol class="rules-list" id="constraintList"></ol>
+    </article>
+
+    <article class="inventory-card glass reveal">
+      <header class="panel-head"><span class="micro">OWNED INVENTORY</span><span class="badge-soft">6 ITEMS TRACKED</span></header>
+      <h3>Already in rotation.</h3>
+      <div class="inventory-list" id="inventoryList"></div>
+    </article>
+
+    <article class="scent-card glass reveal">
+      <header class="panel-head"><span class="micro">SCENT PROFILE</span><span class="badge-soft">MEMORY</span></header>
+      <h3>Loved notes</h3>
+      <div class="note-chips" id="lovedNotes"></div>
+      <h3 class="note-avoid-title">Avoid</h3>
+      <div class="note-chips avoid" id="avoidNotes"></div>
+      <div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><span>Stored in your local vault. No ad profiles, no resale, no cloud memory you do not control.</span></div>
+    </article>
+  </div>
+</section>
+
+<section class="panel" id="panel-ingest" role="tabpanel" aria-labelledby="tab-ingest" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">05 / CAPTURE STUDIO</p>
+      <h2>Two seconds.<br><em>Filed.</em></h2>
+      <p class="lede">Paste a link, a screenshot's text, or a life-hack note. The router classifies it, embeds it, and runs the gate before it ever reaches your wishlist.</p>
+    </div>
+  </div>
+
+  <div class="capture-grid">
+    <form id="ingestForm" class="capture-form glass reveal" novalidate>
+      <fieldset class="mode-field">
+        <legend class="micro">CAPTURE MODE</legend>
+        <div class="segmented">
+          <input type="radio" name="ingestMode" id="mode-url" value="url" checked />
+          <label for="mode-url"><svg class="icon"><use href="#i-external"/></svg><span>Web / social link</span></label>
+          <input type="radio" name="ingestMode" id="mode-screenshot" value="screenshot" />
+          <label for="mode-screenshot"><svg class="icon"><use href="#i-search"/></svg><span>Screenshot OCR</span></label>
+          <input type="radio" name="ingestMode" id="mode-note" value="note" />
+          <label for="mode-note"><svg class="icon"><use href="#i-pulse"/></svg><span>Life-hack note</span></label>
         </div>
-      `;
-      for (const [cat, cnt] of entries) {
-        const active = selectedCategory === cat ? 'active' : '';
-        html += `
-          <div class="cat-item ${active}" onclick="selectCategory('${cat.replace(/'/g, "\\'")}')">
-            <span>${cat}</span>
-            <span class="cat-count">${cnt}</span>
-          </div>
-        `;
-      }
-      sb.innerHTML = html;
-    }
+      </fieldset>
+      <div class="form-row">
+        <div class="field"><label for="ingestTitle">Item / headline</label><input type="text" id="ingestTitle" placeholder="e.g. The Ordinary Glycolic Acid 7%" autocomplete="off" /></div>
+        <div class="field"><label for="ingestPrice">Retail price (USD)</label><input type="number" id="ingestPrice" min="0" step="0.01" placeholder="45" /></div>
+      </div>
+      <div class="field"><label for="ingestInput">URL, screenshot text, or transcript</label><textarea id="ingestInput" rows="4" placeholder="Paste a link, raw OCR text, or the life hack you want to keep…"></textarea></div>
+      <p class="form-error" id="ingestError" role="alert" hidden></p>
+      <button class="btn btn-wide" type="submit" id="ingestBtn"><svg class="icon"><use href="#i-spark"/></svg> Ingest &amp; run impulse gate</button>
+    </form>
 
-    function selectCategory(cat) {
-      selectedCategory = cat;
-      renderCategorySidebar();
-      loadBookmarks();
-    }
-
-    async function loadBookmarks() {
-      const q = document.getElementById('bmSearchInput').value.trim();
-      const browser = document.getElementById('bmBrowserFilter').value;
-      const params = new URLSearchParams({
-        category: selectedCategory,
-        browser,
-        q,
-        limit: 100,
-      });
-      const res = await fetch('/api/bookmarks?' + params.toString());
-      const data = await res.json();
-
-      document.getElementById('bmResultStatus').textContent =
-        `Showing ${data.items.length} of ${data.total} matching bookmarks ${selectedCategory !== 'ALL' ? `in [${selectedCategory}]` : ''} ${q ? `for query "${q}"` : ''}`;
-
-      const tbody = document.getElementById('bmTableBody');
-      tbody.innerHTML = data.items
-        .map(
-          (b) => `
-        <tr>
-          <td>
-            <a class="bm-link" href="${b.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(b.title)}</a>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${escapeHtml(b.domain)} ${b.match_score ? `• Match Score: ${b.match_score}` : ''}</div>
-            <div>${(b.tags || []).map((t) => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>
-          </td>
-          <td><span class="badge blue">${escapeHtml(b.category)}</span></td>
-          <td style="font-size:12px;color:var(--muted)">
-            <strong style="color:var(--text)">${escapeHtml(b.browser)}</strong><br/>
-            ${escapeHtml(b.original_folder)}
-          </td>
-          <td>
-            <div style="font-size:11px;color:#34d399;margin-bottom:5px;">✓ ${escapeHtml(b.snapshot_status)}</div>
-            <button class="btn secondary" style="padding:4px 9px;font-size:11.5px;" onclick="promoteToWishlist('${b.id}')">+ Impulse-Gate Wishlist</button>
-          </td>
-        </tr>
-      `
-        )
-        .join('');
-    }
-
-    function renderWishlist() {
-      const grid = document.getElementById('wishlistGrid');
-      grid.innerHTML = (vaultData.wishlist || [])
-        .map((w) => {
-          let badgeClass = 'amber';
-          if (w.verdict === 'BUY_RECOMMENDED' || w.verdict === 'BUY_AT_DISCOUNTER') badgeClass = 'green';
-          if (w.verdict === 'SKIP_DUPLICATE') badgeClass = 'rose';
-
-          return `
-          <div class="card">
-            <div class="card-top">
-              <div>
-                <div style="font-size:11.5px;color:var(--muted);font-weight:600;">${escapeHtml(w.category)} • ${escapeHtml(w.cooling_status)}</div>
-                <h3 style="font-size:15.5px;margin-top:3px;">
-                  <a href="${w.url}" target="_blank" class="bm-link" style="color:var(--text)">${escapeHtml(w.title)}</a>
-                </h3>
-              </div>
-              <span class="badge ${badgeClass}">${escapeHtml(w.verdict_label)}</span>
-            </div>
-
-            <div class="price-row">
-              <div>
-                <span class="price-floor">$${Number(w.lowest_verified_price).toFixed(2)}</span>
-                <span class="price-retail">$${Number(w.retail_price).toFixed(2)} Retail</span>
-                <div style="font-size:11px;color:var(--muted);">Best Source: ${escapeHtml(w.best_source)}</div>
-              </div>
-              <div class="price-cpu">Est. $${Number(w.cost_per_use).toFixed(2)} / use</div>
-            </div>
-
-            <div class="meta-box ${w.inventory_overlap.includes('HIGH') ? 'warn' : ''}">
-              <strong>Owned Inventory Check:</strong> ${escapeHtml(w.inventory_overlap)}
-            </div>
-            <div class="meta-box ${w.routine_compatibility.includes('CONFLICT') ? 'warn' : ''}">
-              <strong>Routine / Constraint Check:</strong> ${escapeHtml(w.routine_compatibility)}
-            </div>
-            <div class="meta-box dupe">
-              <strong>Chemical / Spec Dupe:</strong> ${escapeHtml(w.dupe_alternative)}
-            </div>
-
-            <p style="font-size:12.5px;color:var(--muted);">${escapeHtml(w.anti_hype_summary)}</p>
-
-            <div style="display:flex;gap:8px;margin-top:auto;">
-              <button class="btn secondary" style="width:100%" onclick="runImpulseAudit('${w.id}')">Ask Nemotron 3 Ultra: "Talk Me Out of Buying This"</button>
-            </div>
-          </div>
-        `;
-        })
-        .join('');
-    }
-
-    function renderProtocols() {
-      const grid = document.getElementById('protocolsGrid');
-      grid.innerHTML = (vaultData.protocols || [])
-        .map(
-          (p) => `
-        <div class="card">
-          <div class="card-top">
-            <div>
-              <div style="font-size:11.5px;color:var(--nebius);font-weight:600;">${escapeHtml(p.schedule)} • ${escapeHtml(p.source_platform)}</div>
-              <h3 style="font-size:16px;margin-top:3px;">${escapeHtml(p.title)}</h3>
-            </div>
-            <span class="badge green">${escapeHtml(p.credibility_badge)}</span>
-          </div>
-          <div class="meta-box warn">
-            <strong>Active Conflict Guardrail:</strong> ${escapeHtml(p.conflict_alert)}
-          </div>
-          <ul style="padding-left:18px;font-size:13px;color:#d1d5db;display:flex;flex-direction:column;gap:6px;">
-            ${(p.steps || []).map((s) => `<li>${escapeHtml(s)}</li>`).join('')}
-          </ul>
-          <div style="font-size:11.5px;color:#34d399;margin-top:auto;">✓ ${escapeHtml(p.snapshot_status)}</div>
+    <aside class="pipeline glass reveal">
+      <header class="panel-head"><span class="micro">ROUTING PIPELINE</span><span class="live-label"><i></i>READY</span></header>
+      <div class="pipe">
+        <div class="pipe-step"><span class="pipe-num">01</span><div><h4>Classify</h4><p>Fast structured extraction across fourteen clusters with <code>Nemotron 3 Nano</code>.</p></div></div>
+        <div class="pipe-step"><span class="pipe-num">02</span><div><h4>Gate</h4><p>Closet overlap, routine conflicts, and budget impact checked before storage.</p></div></div>
+        <div class="pipe-step"><span class="pipe-num">03</span><div><h4>Embed</h4><p>Local semantic vector links the new signal to everything you already saved.</p></div></div>
+        <div class="pipe-step"><span class="pipe-num">04</span><div><h4>Route</h4><p>Deep calls escalate to <code>Nemotron 3 Ultra</code> with a 1M-token context window.</p></div></div>
+      </div>
+      <div class="examples">
+        <span class="micro">TRY ONE</span>
+        <div class="example-chips">
+          <button type="button" class="example-chip" data-example="glycolic">Glycolic acid cleanser</button>
+          <button type="button" class="example-chip" data-example="kit">Vintage Arsenal kit</button>
+          <button type="button" class="example-chip" data-example="cashmere">Cashmere crewneck</button>
+          <button type="button" class="example-chip" data-example="price">Camera-roll price tag</button>
         </div>
-      `
-        )
-        .join('');
-    }
+      </div>
+    </aside>
+  </div>
+  <div id="ingestResult" class="result-panel glass" hidden></div>
+</section>
+<section class="panel" id="panel-router" role="tabpanel" aria-labelledby="tab-router" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">06 / TOKEN FACTORY ROUTER</p>
+      <h2>Six models.<br><em>One decision.</em></h2>
+      <p class="lede">Every task is routed to the cheapest model that can still do it well — Nano for extraction, Super for structuring, Ultra for the arguments that actually change your mind.</p>
+    </div>
+    <div class="head-actions"><button class="btn" id="jobBtn"><svg class="icon"><use href="#i-refresh"/></svg> Run serverless job</button></div>
+  </div>
 
-    function renderContext() {
-      const ctx = vaultData.personal_context || {};
-      const grid = document.getElementById('contextGrid');
+  <div class="router-stats reveal">
+    <div class="stat-card"><span class="micro">CALLS LOGGED</span><strong id="routerCalls">0</strong><small>across the vault</small></div>
+    <div class="stat-card"><span class="micro">TOKENS ROUTED</span><strong id="routerTokens">0</strong><small>in + out</small></div>
+    <div class="stat-card"><span class="micro">AVG LATENCY</span><strong id="routerLatency">0</strong><small>milliseconds</small></div>
+    <div class="stat-card"><span class="micro">ROUTER SPEND</span><strong id="routerSpend">$0.00</strong><small>estimated</small></div>
+  </div>
 
-      const ownedHtml = (ctx.owned_inventory || [])
-        .map(
-          (o) => `
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
-          <strong>${escapeHtml(o.name)}</strong> <span class="badge blue">${escapeHtml(o.status)}</span>
-          <div style="color:var(--muted);font-size:12px;margin-top:2px;">${escapeHtml(o.notes)}</div>
+  <div class="router-grid">
+    <article class="model-card glass reveal">
+      <header class="panel-head"><span class="micro">MODEL MESH</span><span class="live-label"><i></i>ROUTING</span></header>
+      <div class="model-grid" id="modelGrid"></div>
+    </article>
+
+    <article class="audit-card glass reveal">
+      <header class="panel-head"><span class="micro">1M-CONTEXT ORACLE</span><span class="badge-soft">NEMOTRON ULTRA</span></header>
+      <h3>Ask across your entire vault.</h3>
+      <div class="suggestions" id="auditSuggestions">
+        <button type="button" data-prompt="Audit my bookmarks, wishlist, owned wardrobe and skincare stack. What should I buy, skip, or consolidate?">Full vault audit</button>
+        <button type="button" data-prompt="What in my wishlist should I skip this month, and why?">What should I skip?</button>
+        <button type="button" data-prompt="Find duplicate purchases, closet overlaps, and routine conflicts hiding in my vault.">Find hidden conflicts</button>
+      </div>
+      <div class="audit-input-wrap">
+        <textarea id="auditInput" rows="3" aria-label="Question for the vault oracle">Audit my bookmarks, wishlist, owned wardrobe and skincare stack. What should I buy, skip, or consolidate?</textarea>
+        <button class="btn" id="runAuditBtn"><svg class="icon"><use href="#i-arrow"/></svg> Synthesize</button>
+      </div>
+      <div class="console-shell">
+        <div class="console-bar"><span><i></i><i></i><i></i></span><span>ultra / 1m-context</span><span id="auditStatus">IDLE</span></div>
+        <pre class="console" id="auditOutput">The oracle is idle. Run a synthesis to audit 1,397 bookmarks, your wardrobe, budget and routines in a single pass.</pre>
+      </div>
+    </article>
+  </div>
+
+  <div class="router-grid lower">
+    <article class="router-digest glass reveal">
+      <header class="panel-head"><span class="micro">SERVERLESS DIGEST</span><span class="micro" id="routerDigestStamp">—</span></header>
+      <div class="digest-stats" id="routerDigestStats"></div>
+      <ul class="deal-list" id="routerDigestDeals"></ul>
+      <div class="console-shell job-shell">
+        <div class="console-bar"><span><i></i><i></i><i></i></span><span>nebius / serverless job</span><span id="jobStatus">SCHEDULED</span></div>
+        <pre class="console" id="jobOutput" hidden></pre>
+      </div>
+    </article>
+
+    <article class="telemetry-card glass reveal">
+      <header class="panel-head"><span class="micro">LIVE TELEMETRY</span><span class="live-label"><i></i>STREAM</span></header>
+      <div class="tel-list" id="telemetryList"></div>
+    </article>
+  </div>
+</section>
+</main>
+
+<dialog id="oracleDialog" class="oracle-dialog" aria-labelledby="oracleTitle">
+  <div class="oracle-shell">
+    <header class="oracle-head">
+      <div>
+        <p class="eyebrow" id="oracleKicker">IMPULSE GATE / DEEP AUDIT</p>
+        <h2 id="oracleTitle">Oracle readout</h2>
+        <p class="oracle-meta" id="oracleMeta">Routing through Nebius Token Factory…</p>
+      </div>
+      <button class="icon-btn" id="oracleClose" aria-label="Close oracle"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="oracle-body">
+      <div class="console-shell">
+        <div class="console-bar"><span><i></i><i></i><i></i></span><span>nemotron / deep-reasoning</span><span id="oracleStatus">ROUTING</span></div>
+        <pre class="console oracle-console" id="oracleOutput">Establishing a deep-reasoning session with NVIDIA Nemotron 3 Ultra…</pre>
+      </div>
+    </div>
+    <footer class="oracle-foot">
+      <button class="btn ghost sm" id="oracleRerun"><svg class="icon"><use href="#i-refresh"/></svg> Re-run audit</button>
+      <button class="btn sm" id="oracleDismiss">Return to the gate</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="paletteDialog" class="palette-dialog" aria-labelledby="paletteTitle">
+  <div class="palette-shell">
+    <h2 class="sr-only" id="paletteTitle">Command palette</h2>
+    <div class="palette-input">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="text" id="paletteInput" role="combobox" aria-expanded="false" aria-controls="paletteList" aria-autocomplete="list" placeholder="Jump to a room or run a command…" autocomplete="off" />
+      <kbd>Esc</kbd>
+    </div>
+    <div class="palette-list" id="paletteList" role="listbox" aria-label="Commands"></div>
+    <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>Enter</kbd> run</span><span>STORED LOCALLY</span></div>
+  </div>
+</dialog>
+
+<dialog id="sectionsDialog" class="sections-dialog" aria-labelledby="sectionsTitle">
+  <div class="sections-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">SIDEBAR SYSTEM</p>
+        <h2 id="sectionsTitle">Customize sections</h2>
+        <p class="settings-sub">Rename, recolour, hide, reorder, or build an image-card collection of your own.</p>
+      </div>
+      <button class="icon-btn" type="button" id="sectionsClose" aria-label="Close section customizer"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="sections-body">
+      <aside class="sections-manager">
+        <div class="manager-head"><span class="micro">ORDER &amp; VISIBILITY</span><button class="btn ghost sm" type="button" id="newSectionBtn"><svg class="icon"><use href="#i-plus"/></svg> New</button></div>
+        <ul class="manager-list" id="sectionManagerList"></ul>
+        <p class="manager-note">Built-in sections can be hidden, not deleted. Custom sections can hold image cards.</p>
+      </aside>
+      <form id="sectionForm" class="section-editor" novalidate>
+        <input type="hidden" id="sectionId" />
+        <div class="editor-head"><span class="micro" id="sectionFormMode">EDIT SECTION</span><span class="micro">LIVE</span></div>
+        <div class="field"><label for="sectionLabel">Section name</label><input type="text" id="sectionLabel" maxlength="18" autocomplete="off" placeholder="e.g. Grail watches" /></div>
+        <div class="form-row">
+          <div class="field"><label for="sectionIcon">Icon</label><select id="sectionIcon">
+            <option value="i-deck">Dashboard grid</option>
+            <option value="i-vault">Vault</option>
+            <option value="i-gate">Shield</option>
+            <option value="i-pulse">Pulse</option>
+            <option value="i-fingerprint">Fingerprint</option>
+            <option value="i-spark">Spark</option>
+            <option value="i-router">Router</option>
+            <option value="i-search">Search</option>
+            <option value="i-command">Command</option>
+            <option value="i-coin">Coin</option>
+            <option value="i-lock">Lock</option>
+            <option value="i-clock">Clock</option>
+            <option value="i-alert">Alert</option>
+          </select></div>
+          <div class="field"><label for="sectionColorText">Accent colour</label><div class="color-field"><input type="color" id="sectionColor" aria-label="Pick accent colour" /><input type="text" id="sectionColorText" maxlength="7" autocomplete="off" aria-label="Accent colour hex value" placeholder="#c6ff4a" /></div></div>
         </div>
-      `
-        )
-        .join('');
+        <div class="field"><label for="sectionLogo">Logo image URL (optional)</label><input type="url" id="sectionLogo" autocomplete="off" placeholder="https://... or /media/images/..." /></div>
+        <div class="field"><label for="sectionTags">Tags</label><input type="text" id="sectionTags" autocomplete="off" placeholder="watches, grails, resale" /></div>
+        <div class="field"><label for="sectionDesc">Description</label><textarea id="sectionDesc" rows="3" placeholder="What belongs in this section?"></textarea></div>
+        <label class="check-row"><input type="checkbox" id="sectionVisible" /> Show in sidebar</label>
+        <p class="form-error" id="sectionError" role="alert" hidden></p>
+        <div class="editor-actions"><button class="btn ghost sm danger" type="button" id="sectionDeleteBtn"><svg class="icon"><use href="#i-trash"/></svg> Delete</button><button class="btn" type="submit" id="sectionSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save section</button></div>
+      </form>
+    </div>
+  </div>
+</dialog>
 
-      const constraintsHtml = (ctx.skin_and_health_constraints || []).map((c) => `<li>${escapeHtml(c)}</li>`).join('');
+<dialog id="cardDialog" class="card-dialog" aria-labelledby="cardDialogTitle">
+  <div class="card-shell">
+    <header class="settings-head">
+      <div><p class="eyebrow">CUSTOM SECTION</p><h2 id="cardDialogTitle">New card</h2></div>
+      <button class="icon-btn" type="button" id="cardClose" aria-label="Close card editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="cardForm" class="card-form" novalidate>
+      <input type="hidden" id="cardSectionId" />
+      <input type="hidden" id="cardId" />
+      <div class="field"><label for="cardTitle">Title</label><input type="text" id="cardTitle" maxlength="90" autocomplete="off" placeholder="e.g. Seiko SPB143" /></div>
+      <div class="form-row">
+        <div class="field"><label for="cardUrl">Link</label><input type="url" id="cardUrl" autocomplete="off" placeholder="https://..." /></div>
+        <div class="field"><label for="cardPrice">Price label</label><input type="text" id="cardPrice" maxlength="24" autocomplete="off" placeholder="$1,200 / waitlist" /></div>
+      </div>
+      <div class="field"><label for="cardImage">Image URL (image or product page)</label><div class="image-picker"><input type="text" id="cardImage" autocomplete="off" placeholder="Paste an image or product URL" /><button type="button" class="btn ghost sm" id="cardFindImage"><svg class="icon"><use href="#i-image"/></svg> Find</button></div></div>
+      <div class="form-row">
+        <div class="field"><label for="cardStatus">Status label</label><input type="text" id="cardStatus" maxlength="24" autocomplete="off" placeholder="Watching / owned / grail" /></div>
+        <div class="field"><label for="cardColorText">Accent colour</label><div class="color-field"><input type="color" id="cardColor" aria-label="Pick card accent colour" /><input type="text" id="cardColorText" maxlength="7" autocomplete="off" aria-label="Card accent colour hex value" placeholder="#c6ff4a" /></div></div>
+      </div>
+      <div class="field"><label for="cardDesc">Description</label><textarea id="cardDesc" rows="3" maxlength="260" placeholder="Why it matters, sizing, condition, or what you are waiting for."></textarea></div>
+      <div class="field"><label for="cardTags">Tags</label><input type="text" id="cardTags" autocomplete="off" placeholder="japanese, automatic, daily" /></div>
+      <p class="form-error" id="cardError" role="alert" hidden></p>
+      <div class="editor-actions"><button class="btn ghost sm danger" type="button" id="cardDeleteBtn" hidden><svg class="icon"><use href="#i-trash"/></svg> Delete card</button><button class="btn ghost sm" type="button" id="cardCancel">Cancel</button><button class="btn" type="submit" id="cardSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save card</button></div>
+    </form>
+  </div>
+</dialog>
 
-      grid.innerHTML = `
-        <div class="card">
-          <h3>"Already Own" Closet & Shelf Inventory (Blocks Duplicate Buys)</h3>
-          ${ownedHtml}
-        </div>
-        <div class="card">
-          <h3>Personal Constraints, Skin/Routine & Dietary Guardrails</h3>
-          <ul style="padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:8px;margin-top:6px;">
-            ${constraintsHtml}
-          </ul>
-          <div class="meta-box dupe" style="margin-top:12px;">
-            <strong>Fragrance Notes Loved:</strong> ${(ctx.fragrance_profile?.loved_notes || []).join(', ')}<br/>
-            <strong>Avoid Notes:</strong> ${(ctx.fragrance_profile?.avoid_notes || []).join(', ')}
-          </div>
-          <div class="meta-box" style="margin-top:8px;">
-            <strong>Sizing Memory:</strong> Tops: ${ctx.sizes?.tops} | Bottoms: ${ctx.sizes?.bottoms} | Footwear: ${ctx.sizes?.footwear}
-          </div>
-        </div>
-      `;
-    }
+<dialog id="photoDialog" class="photo-dialog" aria-labelledby="photoTitle">
+  <div class="photo-shell">
+    <header class="settings-head">
+      <div><p class="eyebrow">PRODUCT PHOTO</p><h2 id="photoTitle">Wishlist photo</h2></div>
+      <button class="icon-btn" type="button" id="photoClose" aria-label="Close photo editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="photoForm" class="photo-form" novalidate>
+      <div class="photo-preview" id="photoPreview"></div>
+      <div class="field"><label for="photoUrl">Image or product page URL</label><input type="text" id="photoUrl" autocomplete="off" placeholder="Leave blank to find the best image from the saved source." /></div>
+      <p class="photo-note">Stashov fetches the best OpenGraph image, downloads it, and serves it locally. A direct image URL overrides that.</p>
+      <p class="form-error" id="photoError" role="alert" hidden></p>
+      <div class="editor-actions"><button class="btn ghost sm" type="button" id="photoCancel">Cancel</button><button class="btn" type="submit" id="photoSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save photo</button></div>
+    </form>
+  </div>
+</dialog>
 
-    function renderTelemetry() {
-      const tbody = document.getElementById('telemetryTableBody');
-      tbody.innerHTML = (vaultData.telemetry || [])
-        .map(
-          (t) => `
-        <tr>
-          <td style="font-size:12px;color:var(--muted)">${new Date(t.timestamp).toLocaleTimeString()}</td>
-          <td><strong>${escapeHtml(t.task)}</strong></td>
-          <td><span class="badge green">${escapeHtml(t.model)}</span></td>
-          <td style="font-size:12px;color:#7dd3fc">${escapeHtml(t.tier)}</td>
-          <td>${t.latency_ms} ms</td>
-          <td>${(t.tokens_in || 0).toLocaleString()} / ${(t.tokens_out || 0).toLocaleString()}</td>
-          <td>$${Number(t.cost_usd || 0).toFixed(4)}</td>
-        </tr>
-      `
-        )
-        .join('');
-    }
+<div class="toast-host" id="toastHost" role="status" aria-live="polite"></div>
 
-    async function runImpulseAudit(itemId) {
-      const modal = document.getElementById('impulseAuditModal');
-      const out = document.getElementById('impulseAuditOutput');
-      modal.style.display = 'block';
-      out.textContent = 'Routing to NVIDIA Nemotron 3 Ultra on Nebius Token Factory for Impulse-Gate Audit...';
-      const res = await fetch('/api/impulse-gate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemId }),
-      });
-      const data = await res.json();
-      out.textContent = data.analysis || JSON.stringify(data, null, 2);
-      const vRes = await fetch('/api/vault');
-      vaultData = await vRes.json();
-      renderTelemetry();
-    }
-
-    async function promoteToWishlist(bmId) {
-      const res = await fetch('/api/promote-bookmark', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: bmId }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const vRes = await fetch('/api/vault');
-        vaultData = await vRes.json();
-        renderHeaderAndKpis();
-        renderWishlist();
-        renderTelemetry();
-        switchTab('wishlist');
-      }
-    }
-
-    async function submitIngest() {
-      const mode = document.getElementById('ingestMode').value;
-      const title = document.getElementById('ingestTitle').value;
-      const input = document.getElementById('ingestInput').value;
-      const price = document.getElementById('ingestPrice').value;
-      const box = document.getElementById('ingestResultBox');
-      box.style.display = 'block';
-      box.textContent = 'Ingesting via Nebius Token Factory Router...';
-
-      const res = await fetch('/api/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, title, input, price }),
-      });
-      const data = await res.json();
-      box.textContent = JSON.stringify(data, null, 2);
-      await initApp();
-    }
-
-    async function runVaultAudit() {
-      const q = document.getElementById('vaultAuditInput').value;
-      const out = document.getElementById('vaultAuditOutput');
-      out.textContent = 'Executing 1M-Context Vault Audit on nvidia/Nemotron-3-Ultra-550b-a55b...';
-      const res = await fetch('/api/vault-audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }),
-      });
-      const data = await res.json();
-      out.textContent = data.report;
-      const vRes = await fetch('/api/vault');
-      vaultData = await vRes.json();
-      renderTelemetry();
-    }
-
-    async function triggerServerlessJob() {
-      const out = document.getElementById('vaultAuditOutput');
-      out.textContent = 'Running Nebius Serverless Background Job (Deal Poller + Link-Rot Verifier + Weekly Digest)...';
-      const res = await fetch('/api/serverless-job', { method: 'POST' });
-      const data = await res.json();
-      out.textContent = JSON.stringify(data.report, null, 2);
-      const vRes = await fetch('/api/vault');
-      vaultData = await vRes.json();
-      renderTelemetry();
-    }
-
-    async function resyncBookmarks() {
-      const res = await fetch('/api/bookmarks/sync', { method: 'POST' });
-      const data = await res.json();
-      alert(`Synced ${data.total_unique} unique bookmarks from ${data.browsers_synced.join(', ')}`);
-      await initApp();
-    }
-
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    initApp();
-  </script>
+<footer class="site-foot"><span>STASHOV / PERSONAL AI MEMORY OS</span><span>V2.0 — NEBius X NVIDIA</span><span>PRIVATE BY DESIGN</span></footer>
+</div>
+<script src="/app.js" defer></script>
 </body>
 </html>

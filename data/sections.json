@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "id": "deck",
+      "builtin": true,
+      "label": "Deck",
+      "icon": "i-deck",
+      "logo": "",
+      "color": "#c6ff4a",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 0,
+      "cards": []
+    },
+    {
+      "id": "vault",
+      "builtin": true,
+      "label": "Vault",
+      "icon": "i-vault",
+      "logo": "",
+      "color": "#63e6ff",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 1,
+      "cards": []
+    },
+    {
+      "id": "wishlist",
+      "builtin": true,
+      "label": "Gate",
+      "icon": "i-gate",
+      "logo": "",
+      "color": "#ffc35c",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 2,
+      "cards": []
+    },
+    {
+      "id": "protocols",
+      "builtin": true,
+      "label": "Rules",
+      "icon": "i-pulse",
+      "logo": "",
+      "color": "#a98bff",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 3,
+      "cards": []
+    },
+    {
+      "id": "context",
+      "builtin": true,
+      "label": "You",
+      "icon": "i-fingerprint",
+      "logo": "",
+      "color": "#ff6b8a",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 4,
+      "cards": []
+    },
+    {
+      "id": "ingest",
+      "builtin": true,
+      "label": "Capture",
+      "icon": "i-spark",
+      "logo": "",
+      "color": "#52f2ab",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 5,
+      "cards": []
+    },
+    {
+      "id": "router",
+      "builtin": true,
+      "label": "Router",
+      "icon": "i-router",
+      "logo": "",
+      "color": "#8ab4ff",
+      "tags": [],
+      "description": "",
+      "visible": true,
+      "order": 6,
+      "cards": []
+    }
+  ]
+}
