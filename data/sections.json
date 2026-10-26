@@ -28,6 +28,19 @@
       "cards": []
     },
     {
+      "id": "library",
+      "builtin": true,
+      "label": "Library",
+      "icon": "i-book",
+      "logo": "",
+      "color": "#8ab4ff",
+      "tags": [],
+      "description": "Reference links separated from price tracking.",
+      "visible": true,
+      "order": 2,
+      "cards": []
+    },
+    {
       "id": "wishlist",
       "builtin": true,
       "label": "Gate",
@@ -37,7 +50,7 @@
       "tags": [],
       "description": "",
       "visible": true,
-      "order": 2,
+      "order": 3,
       "cards": []
     },
     {
@@ -50,7 +63,7 @@
       "tags": [],
       "description": "",
       "visible": true,
-      "order": 3,
+      "order": 4,
       "cards": []
     },
     {
@@ -63,7 +76,7 @@
       "tags": [],
       "description": "",
       "visible": true,
-      "order": 4,
+      "order": 5,
       "cards": []
     },
     {
@@ -76,7 +89,7 @@
       "tags": [],
       "description": "",
       "visible": true,
-      "order": 5,
+      "order": 6,
       "cards": []
     },
     {
@@ -89,7 +102,7 @@
       "tags": [],
       "description": "",
       "visible": true,
-      "order": 6,
+      "order": 7,
       "cards": []
     }
   ]

@@ -28,6 +28,14 @@ build/
 # Test coverage
 coverage/
 
+# Runtime state snapshots
+*.bak
+data/backups/
+data/telemetry.json
+
+# Agent runtime scratch
+.freebuff/
+
 # Temporary files
 *.tmp
 *.temp

@@ -24,7 +24,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 | Cognitive Tier | Model on Nebius Token Factory | Role in Stashov |
 | :--- | :--- | :--- |
-| **1M-Context Deep Reasoning** | `nvidia/Nemotron-3-Ultra-550b-a55b` | Vault-wide synthesis across 1,386 bookmarks, "Talk Me Out of Buying This" impulse audits, skincare/supplement conflict detection, and weekly digests. |
+| **1M-Context Deep Reasoning** | `nvidia/Nemotron-3-Ultra-550b-a55b` | Vault-wide synthesis across 1,346 bookmarks, "Talk Me Out of Buying This" impulse audits, skincare/supplement conflict detection, and weekly digests. |
 | **Mid-Tier Agentic Synthesis** | `nvidia/Nemotron-3-Super-120b-a12b` | Promoting bookmarks into structured wishlist cards, protocol checklist generation, and dupe comparison. |
 | **Fast Structured Extraction** | `nvidia/Nemotron-3-Nano-30B-A3B` | Sub-second URL/transcript classification, auto-tagging across 14 categories, and function-calling price schema extraction. |
 | **Vision OCR Ingestion** | `zai-org/GLM-5.3-Flash` / `Qwen3.8-27B` | Camera-roll screenshot OCR (extracting product names, prices, brands, and routine steps from mobile screenshots). |
@@ -37,33 +37,63 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 1. **Automated Browser Bookmark Importer & 14-Category Organizer (`scripts/sync-bookmarks.js`):**
    - Automatically scans local **Google Chrome**, **Brave Browser**, and **Microsoft Edge** bookmark stores.
-   - Deduplicates **1,386 unique bookmarks** and classifies them into **14 structured categories** (Programming & Cloud, AI Models & Infra, Career & Interview Prep, Menswear & Streetwear, Fragrances & Cologne, Skincare/Health & Protocols, Watches/Footwear & Accessories, Soccer Kits, Global Sourcing Proxies, etc.).
+   - Deduplicates **1,346 unique bookmarks** and classifies them into **14 structured categories** (Programming & Cloud, AI Models & Infra, Career & Interview Prep, Menswear & Streetwear, Fragrances & Cologne, Skincare/Health & Protocols, Watches/Footwear & Accessories, Soccer Kits, Global Sourcing Proxies, etc.).
+   - **Reference Library:** separates the **1,017 non-shopping links** into 10 reference shelves (Education, Programming, AI, Career, Business, Design, Security, Utilities, Gaming, Sourcing), with a live check, a short description, and a "use for" note on every entry. Confirmed-dead links are removed; bot-blocked and timeout entries stay marked for review. A post-audit review restored 9 false positives and logged every decision in `data/library-removal-review.json`.
+   - **Duplicate review and bulk shelf care:** a canonical-URL scan finds pages saved more than once (ignoring `utm_*`, `fbclid`, `www`, trailing slashes and parameter order) and lets you keep one copy while archiving the rest. Select mode adds archive, restore, and move-to-section actions; archived links stay recoverable from the **Archived** status filter.
+   - **Generated cluster reference cards:** every one of the 14 clusters has a dedicated 800x600 SVG card in `public/cluster-cards/`, rendered on the cluster board for reference clusters and used as the fallback cover when a product cluster has no cached product image. Product clusters keep their live wishlist photos and thumbnails so the cover is always the actual item. Regenerate all cards with `npm run generate-cluster-cards`.
 2. **Smart Buyer & Impulse-Gate Engine:**
    - **"Already Own" Closet & Shelf Overlap Check:** Blocks duplicate impulse saves (e.g., flagging a saved parka when you already own a Black Quilted Winter Parka).
-   - **Monthly Fun-Money Budget Enforcer:** Tracks real-time spend against your monthly discretionary cap ($300/mo) and calculates **Cost-Per-Use**.
+   - **Pre-gate review with real prices (`lib/product-info.js`, `lib/promotion.js`):** A bookmark now opens a review dialog before it enters the Gate. Stashov reads the product page's JSON-LD or OpenGraph metadata for title, brand, currency, price, and image, and shows exactly what it found. Nothing is gated until you confirm, so a wrong title or price can be corrected first. The card labels the source as **captured**, **manual**, or **missing**, and every field stays editable from the Details dialog. Missing prices never become fake `$95` placeholders.
+   - **Paste-a-link quick add:** the Gate accepts a raw product URL, with a **Paste** button that reads the link from the clipboard, so a product found in a video, chat, or social feed can go from link to reviewed wishlist item without hunting through 1,346 bookmarks. The command palette also jumps straight to this field.
+   - **One-click capture bookmarklet (`#captureDialog`):** open **Capture anywhere** in the Gate, drag **Add to Stashov** to the bookmarks bar, then click it on any product page. The bookmarklet reads the page’s JSON-LD/OpenGraph title, brand, price, currency, and image directly in the browser, then opens `/?capture=<page-url>` with that snapshot. When structured metadata is absent, it can read a visible price from the product area and explicitly marks it **low confidence** in the review, Gate card, and saved price note. That fallback prefers the current sale price over a struck compare-at price, follows the selected variant when variants show their own prices, and refuses ranges, "from" prices, installment copy, shipping thresholds, and per-unit prices instead of guessing. This keeps the review working on stores that return 403 to server-side requests. If the page exposes no metadata or visible price, the server-side reader remains the fallback. The dialog also provides copyable bookmarklet code and a mobile fallback note. The capture URL is consumed once so refreshes do not repeat the review.
+   - **Monthly Fun-Money Ledger with editable caps:** Every Bought action writes one auditable ledger entry. The month's spend, remaining budget, and over-budget state are derived from that ledger, so the cap rolls over automatically on the 1st. The cap and optional per-category caps are editable from the ledger, which also shows a category breakdown and month-by-month history.
    - **Discounter & Chemical/Spec Dupe Finder:** Cross-links retail product saves against your own bookmarked discounters (`Olfactory Factory LLC`, `FragranceNet`, `Quince`, `Thursday Factory Seconds`).
-   - **14-Day Cooling-Off Lock:** Locks new impulse saves behind a timer before recommending checkout.
-3. **Living Playbooks & Routine Conflict Detector:**
+   - **14-Day Cooling-Off State Machine (`lib/gate.js`):** New saves get `added_at`, `unlock_at`, and a real lifecycle (`cooling → ready → bought/skipped/snoozed`). Every countdown is derived from timestamps, not seed text. **Snooze** pushes the decision out 7/14/30 days, **Skip** archives without spending, and **Buy** is rejected until the gate clears. An archived wish can be **reopened**, and a mistaken ledger entry can be **voided** while staying in the data file for audit.
+   - **Price history, targets and re-checks:** every capture, manual edit, and **Check price** action appends a timestamped observation to the wish. Gate cards show a sparkline, lowest-seen price, observation count, and last-checked time. Set an optional target price in Details; the Gate flags the wish when the observed price meets it. Re-checking is rate limited and uses the same SSRF-safe reader as promotion.
+   - **Duplicate warning before the clock starts:** the review dialog compares the incoming title against active wishes and surfaces likely duplicates (with the matching price and same-store hint) before you start a new 14-day gate.
+   - **Export, restore and automatic snapshots:** download the whole vault, sections, and cluster covers from You → Data & Backups. Restoring validates the file, writes a `pre-*` snapshot first, then replaces the vault. Local writes are atomic, keep the previous file as `.bak`, and rotate timestamped snapshots in `data/backups` (last 20).
+3. **Living Playbooks, Routine Builder & Conflict Detector:**
    - Converts static life-hack bookmarks into structured Morning/Evening protocols (Clear Skin AM/PM Split, Crash-Free Energy Stack, Fragrance Layering & Discounter Rules, Research Peptide COA Safety Checklist).
+   - **Paste-to-routine builder:** paste a TikTok/YouTube caption or product list into Rules, generate AM/PM steps, review the guardrail, then save, edit, or delete the protocol.
+   - **Product photos inside routines:** link any wishlist items to a protocol. The first becomes a featured product tile and the rest sit in the product rail, each showing its cached photo, brand, verified price, and a click-through to its Gate card. The parser pre-links products it recognizes from the pasted text; the routine dialog lets you correct the selection.
    - Actively flags ingredient/routine conflicts (e.g., blocking an exfoliating acid cleanser in the PM window alongside `0.1% Adapalene`).
-4. **2-Second Ingest Studio & Transparent Router Telemetry:**
+   - **Today's Playbook:** check off routines for the current day, see the daily completion count and streak, and uncheck a mistaken tap. The log is stored per protocol in the vault and is capped for readability.
+4. **Capture from anywhere, including a phone:**
+   - Desktop: the **Add to Stashov** bookmarklet, or paste a product link directly into the Gate.
+   - Mobile: install the PWA from a share menu. The web manifest registers a **Web Share Target** at `/share-target`, so sharing a product link from Chrome/Android opens the pre-gate review (`/?capture=…`). HTTPS is required outside localhost.
+   - The app also persists the active tab, Gate lane, Library section/status/search, and Vault cluster in the URL hash, so refresh and Back preserve the view.
+5. **2-Second Ingest Studio & Transparent Router Telemetry:**
    - Ingests URLs, camera-roll screenshots, or notes and logs live model routing latency, token usage, and cost in the **Nebius Token Factory Telemetry Console**.
 
 ---
+
+## Private by Default
+
+Stashov is a personal vault, so the server is locked down by default:
+
+- **Loopback binding.** `HOST` defaults to `127.0.0.1`. Binding a non-loopback interface without `STASHOV_ACCESS_TOKEN` is refused at startup unless `STASHOV_ALLOW_INSECURE_NETWORK=1` is explicitly set.
+- **Access token.** Set `STASHOV_ACCESS_TOKEN` for any shared or hosted deployment. The unlock page stores an HMAC-derived session in an `HttpOnly; SameSite=Lax` cookie; the token itself is never written to `localStorage`. Lax still blocks cross-site POSTs while letting a bookmarklet or an external link open the vault without a second unlock. A public `STASHOV_PUBLIC_ORIGIN` with no token returns `503` instead of serving the vault unprotected.
+- **Origin and content-type checks.** Cross-origin writes, `Origin: null`, and API writes with a body that is not JSON are rejected. Wildcard CORS is gone. A host allowlist blocks DNS rebinding on local installs; set `STASHOV_PUBLIC_ORIGIN` for a custom domain or reverse proxy. Malformed `Host` headers get a `400` instead of taking the process down.
+- **Security headers.** CSP (self-hosted scripts only), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, COOP/CORP, and HSTS behind HTTPS.
+- **SSRF-safe fetching.** Product pages and images go through `lib/safe-fetch.js`: every redirect is revalidated, DNS is resolved and pinned to the connection, private/loopback/link-local/metadata addresses are blocked, credentials and non-standard ports are rejected, and response size/time limits apply.
+- **No active image content.** Cached images must be raster formats and pass magic-byte checks. SVG is rejected for remote caching; any legacy SVG is served with a sandbox CSP and attachment disposition.
+- **Durable writes.** Vault writes are temp-file + fsync + rename, keep a `.bak`, and rotate timestamped snapshots. Telemetry no longer rewrites the 2.4 MB vault on every search.
+- **Rate limits.** LLM, image, preview, promotion, sync, import, price-refresh, and unlock routes have in-process per-IP limits. Ten failed unlock attempts per address in fifteen minutes return `429`, so the access token cannot be guessed quickly.
 
 ## Quick Start (Local)
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/arafatsani/stashov-personal-ai.git
+git clone https://github.com/Arafat87/stashov-personal-ai.git
 cd stashov-personal-ai
 
 # 2. Install dependencies
 npm ci
 
-# 3. (Optional) Configure your Nebius Token Factory API Key
+# 3. (Optional) Configure your Nebius Token Factory API Key and access settings
 cp .env.example .env
 # Edit .env and set NEBIUS_API_KEY=your_key_here
+# Add STASHOV_ACCESS_TOKEN before exposing the app beyond localhost.
 
 # 4. Sync & categorize local browser bookmarks (Chrome / Brave / Edge)
 npm run sync-bookmarks
@@ -71,7 +101,10 @@ npm run sync-bookmarks
 # 5. Run the Nebius Serverless Job worker check
 npm run worker
 
-# 6. Start the Stashov Web Vault & Agent Server
+# 6. (Optional) Audit the reference library, extract descriptions, and remove confirmed-dead links
+npm run audit-library
+
+# 7. Start the Stashov Web Vault & Agent Server
 npm start
 # Open http://localhost:3847
 ```
@@ -80,23 +113,28 @@ npm start
 
 ## Deploy to Production (Demo URL for Hackathon)
 
-### Option A: Vercel (Recommended — Free Tier, Zero Config)
+### Option A: Vercel (Recommended — Free Tier)
 
-1. Push this repo to GitHub
+The canonical deployment is **[https://stashov.com](https://stashov.com)**.
+
+1. Push this repo to GitHub (`https://github.com/Arafat87/stashov-personal-ai`)
 2. Go to [vercel.com](https://vercel.com) → **Add New Project** → Import your GitHub repo
 3. Vercel auto-detects `vercel.json` and deploys the Node.js server
-4. In **Settings → Environment Variables**, add:
+4. Open **Storage → Create Database → Blob**, connect it to this project, and redeploy. Vercel injects `BLOB_STORE_ID`; without a Blob store the vault falls back to `/tmp` and edits disappear between requests. For a self-hosted Vercel-compatible setup, set `BLOB_READ_WRITE_TOKEN` instead.
+5. In **Settings → Environment Variables**, add:
+   - `STASHOV_ACCESS_TOKEN` = a long random secret (required for a public demo; the server serves `503` or `401` without it)
+   - `STASHOV_PUBLIC_ORIGIN` = `https://stashov.com` (also add `https://www.stashov.com` only if you configure the `www` host)
    - `NEBIUS_API_KEY` = your Token Factory API key
-   - (All other model env vars are pre-configured in `vercel.json`)
-5. Deploy → Get your `https://stashov-personal-ai.vercel.app` demo URL
+   - (Model IDs fall back to the defaults in `server.js`; set `MODEL_*` only to override them)
+6. Deploy → open `https://stashov.com`, unlock with the token, and confirm `/api/vault` returns `401` while signed out. Never leave a public deployment without `STASHOV_ACCESS_TOKEN`.
 
 ### Option B: Render (Free Web Service)
 
 1. Push this repo to GitHub
 2. Go to [render.com](https://render.com) → **New +** → **Web Service** → Connect repo
 3. Render auto-detects `render.yaml` and configures the service
-4. In **Environment**, add `NEBIUS_API_KEY` as a secret
-5. Deploy → Get your `https://stashov-personal-ai.onrender.com` demo URL
+4. In **Environment**, add `NEBIUS_API_KEY` and `STASHOV_ACCESS_TOKEN` as secrets. `render.yaml` already sets `HOST=0.0.0.0`; the server refuses to start on a public interface without a token.
+5. Deploy → open the demo URL and unlock it with the token. Health checks use the public `/api/health` route.
 
 ### Option C: Nebius Serverless Endpoints (Native)
 
@@ -111,9 +149,9 @@ npm start
 - [x] **Working project on Nebius Token Factory** using NVIDIA Nemotron models (Ultra, Super, Nano, Lightning)
 - [x] **Category: Personal AI** — always-on private assistant with persistent memory, skills, tool access
 - [x] **Project description** — what/why/how documented in this README
-- [ ] **Working demo URL** — deploy via Vercel/Render/Nebius (see above)
-- [ ] **≤3-minute public YouTube demo video** — script in `Personal AI Hackerthon.md` Section 7
-- [x] **Public code repo** — Apache 2.0 license visible at top, README with setup/run instructions
+- [ ] **Working demo URL** — [stashov.com](https://stashov.com); redeploy the latest build with `STASHOV_ACCESS_TOKEN` before submitting
+- [ ] **≤3-minute public YouTube demo video** — walk through the Gate review, a routine, and the Library cleanup
+- [ ] **Public code repo** — [Arafat87/stashov-personal-ai](https://github.com/Arafat87/stashov-personal-ai); make the repository public and push the latest commit
 - [x] **NVIDIA Nemotron + Token Factory usage highlighted** — model routing table above + telemetry console
 - [ ] **Feedback on Nebius + NVIDIA tools** — add to submission form
 - [x] **Category = Personal AI**
@@ -124,7 +162,7 @@ npm start
 
 ```
 stashov-personal-ai/
-├── server.js                    # Main HTTP server + REST API (6 endpoints)
+├── server.js                    # Main HTTP server + REST API
 ├── vercel.json                  # Vercel deployment config
 ├── render.yaml                  # Render deployment config
 ├── package.json                 # npm scripts: start, sync-bookmarks, worker, test
@@ -132,15 +170,26 @@ stashov-personal-ai/
 ├── LICENSE                      # Apache 2.0
 ├── README.md                    # This file
 ├── scripts/
-│   └── sync-bookmarks.js        # Chrome/Brave/Edge bookmark importer + 14-category classifier
+│   ├── sync-bookmarks.js        # Chrome/Brave/Edge bookmark importer + 14-category classifier
+│   └── audit-library.js         # Reference-link checker + description extractor
+├── lib/
+│   ├── gate.js                  # 14-day gate state machine, buy/skip/snooze/reopen, ledger, budget caps
+│   ├── product-info.js          # JSON-LD/OpenGraph product capture for promoted bookmarks
+│   ├── promotion.js             # Pre-gate preview + reviewed wish construction
+│   ├── library.js               # Reference section taxonomy and classifier
+│   ├── routine.js               # Pasted-routine parser and conflict guardrails
+│   └── protocols.js             # Protocol create/update/delete
 ├── jobs/
 │   └── nebius-serverless-worker.js  # Nebius Serverless Job: deal poller, link-rot verifier, digest generator
 ├── public/
-│   └── index.html               # 6-tab Web Vault (Bookmarks, Wishlist, Protocols, Context, Ingest, Router)
+│   └── index.html               # 8-tab Web Vault (Deck, Vault, Library, Gate, Rules, You, Capture, Router)
 ├── data/
-│   └── vault.json               # SQLite-free JSON vault: 1,386 bookmarks, 12 wishlist items, 5 protocols, personal context, telemetry
+│   └── vault.json               # SQLite-free JSON vault: 1,346 bookmarks, 13 wishlist items, 5 protocols, personal context, telemetry
 └── tests/
-    └── stashov.test.js          # 4 passing tests (bookmarks, classifier, embeddings, serverless job)
+    ├── gate.test.js             # Gate lifecycle, ledger rollover, budget caps, details, reopen/void
+    ├── product-info.test.js     # JSON-LD/OpenGraph price and brand extraction
+    ├── promotion.test.js        # Pre-gate preview and reviewed-price provenance
+    └── stashov.test.js          # Vault, classifier, embeddings, job, library, routine, protocol CRUD
 ```
 
 ---
@@ -149,12 +198,35 @@ stashov-personal-ai/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/vault` | Full vault summary + personal context + wishlist + protocols + telemetry |
-| GET | `/api/bookmarks` | Paginated, filtered, hybrid semantic+lexical search across 1,386 bookmarks |
+| GET | `/api/health` | Public readiness probe (no vault data) |
+| GET | `/api/export` | Download a complete vault + sections + cluster-cover backup |
+| POST | `/api/import` | Validate and restore a backup after writing a pre-import snapshot |
+| GET | `/api/vault` | Full vault summary + personal context + wishlist + gate/ledger state + protocols + routine log + telemetry |
+| GET | `/api/bookmarks` | Paginated, filtered lexical search across 1,346 bookmarks, with a local vector tie-breaker |
+| GET | `/api/library` | Paginated reference library with sections, search, health status, descriptions; `status=archived` lists archived links |
+| GET | `/api/library/duplicates` | Groups library links that resolve to the same canonical URL |
+| POST | `/api/library/bulk` | Archive, restore, or refile up to 250 library links at once |
+| PUT | `/api/library/:id` | Edit a reference description, use-for note, or section |
+| POST | `/api/bookmark-preview` | Read a bookmark or pasted product URL and return a review payload without gating it |
+| POST | `/api/promote-bookmark` | Start the 14-day gate from reviewed product details |
+| POST | `/api/routines/parse` | Structure a pasted routine into AM/PM steps and conflict guardrails |
+| POST | `/api/protocols` | Create a routine/protocol |
+| PUT | `/api/protocols/:id` | Edit a routine/protocol |
+| DELETE | `/api/protocols/:id` | Delete a routine/protocol |
+| POST | `/api/protocols/:id/today` | Check a routine on/off for one local calendar day |
 | POST | `/api/bookmarks/sync` | Re-sync local browser bookmarks (Chrome, Brave, Edge) |
 | POST | `/api/ingest` | Ingest URL, screenshot OCR, or life-hack note → auto-categorize + impulse-gate |
 | POST | `/api/impulse-gate` | Run Nemotron 3 Ultra "Talk Me Out of Buying This" deep audit on any item |
-| POST | `/api/promote-bookmark` | Promote any browser bookmark into the impulse-gated wishlist |
+| POST | `/api/bookmark-preview` | Read a bookmark's product page and return a review card without gating it |
+| POST | `/api/promote-bookmark` | Promote a reviewed bookmark into the impulse-gated wishlist |
+| PATCH | `/api/wishlist/:id/details` | Correct a wish's title, brand, prices, target, or source; only changed prices are marked manual |
+| POST | `/api/wishlist/:id/refresh-price` | Re-read the saved product page, append a price-history point, and report the change |
+| POST | `/api/wishlist/:id/buy` | Record a cleared purchase in the spend ledger (409 while locked or already bought) |
+| POST | `/api/wishlist/:id/skip` | Archive a wish as skipped without spending |
+| POST | `/api/wishlist/:id/snooze` | Push the decision date out by 1–90 days |
+| POST | `/api/wishlist/:id/reopen` | Return a bought/skipped wish to the gate; a bought wish's ledger entry is voided |
+| PUT | `/api/budget` | Update the monthly cap and optional per-category caps |
+| POST | `/api/ledger/:id/void` | Void a mistaken ledger entry and reopen its wish when linked |
 | POST | `/api/vault-audit` | 1M-context Nemotron 3 Ultra synthesis across entire vault |
 | POST | `/api/serverless-job` | Trigger Nebius Serverless Job worker on demand |
 
@@ -164,7 +236,7 @@ stashov-personal-ai/
 
 > **Nebius Token Factory:** The OpenAI-compatible API made integration trivial — drop-in replacement for any OpenAI SDK. The model catalog (`/api/public/models_info`) exposes capabilities (`function_calling`, `context_and_rag`, `responses_api`, `MTP` fast decode) so routing logic is data-driven, not hardcoded. Pricing is transparent (e.g., Qwen3-Embedding-8B at $0.01/M tokens makes semantic memory near-free). Serverless Jobs are a perfect fit for periodic background work without managing infra.
 
-> **NVIDIA Nemotron 3 Ultra (1M context):** The 1M-token window is not a gimmick — it enables genuine multi-document synthesis in one pass: 1,386 bookmarks + full Reddit review threads + ingredient sheets + personal inventory + budget + routines. This is the "killer feature" that makes a personal AI actually *personal*.
+> **NVIDIA Nemotron 3 Ultra (1M context):** The 1M-token window is not a gimmick — it enables genuine multi-document synthesis in one pass: 1,346 bookmarks + full Reddit review threads + ingredient sheets + personal inventory + budget + routines. This is the "killer feature" that makes a personal AI actually *personal*.
 
 > **Nemotron 3 Nano/Super/Lightning:** The tiered routing (Ultra for deep reasoning, Nano for fast extraction, Lightning for MTP decode) cuts latency and cost by 10x vs. using Ultra for everything. `Nemotron-3.5-Lightning` with MTP is notably fast for structured extraction.
 

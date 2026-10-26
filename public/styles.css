@@ -36,8 +36,8 @@
   --line-2: rgba(160, 185, 220, 0.24);
   --text: #f1f5fb;
   --text-2: #c3cee0;
-  --muted: #92a0b5;
-  --dim: #6a788d;
+  --muted: #a3b0c2;
+  --dim: #8494aa;
   --lime: #c6ff4a;
   --lime-deep: #93d411;
   --cyan: #63e6ff;
@@ -46,7 +46,7 @@
   --rose: #ff6b8a;
   --mint: #52f2ab;
   --blue: #8ab4ff;
-  --placeholder: #8493a8;
+  --placeholder: #93a1b5;
   --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -95,6 +95,10 @@ svg { display: block; }
 .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; left: 16px; top: 12px; z-index: 200; padding: 10px 14px; border-radius: 10px; background: var(--lime); color: #0a1404; font: 600 12px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; transform: translateY(-160%); transition: transform .2s ease; }
+.skip-link:focus { transform: none; }
+
+.rail-nav.is-scrollable { mask-image: linear-gradient(to right, #000 90%, transparent 100%); -webkit-mask-image: linear-gradient(to right, #000 90%, transparent 100%); }
 .mono { font-family: var(--font-mono); }
 .micro { font: 500 12px/1.4 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
@@ -302,6 +306,29 @@ select { appearance: none; padding-right: 34px; }
 .js .reveal { opacity: 0; transform: translateY(18px); }
 .js .reveal.is-in { opacity: 1; transform: none; }
 
+/* Large desktop displays: scale the whole interface up instead of leaving a
+   narrow 1560px column surrounded by empty space. Tiers keep the jump modest
+   between widths, and mobile/tablet layouts are untouched. */
+@media (min-width: 1600px) {
+  body { zoom: 1.1; }
+}
+@media (min-width: 1900px) {
+  body { zoom: 1.18; }
+  main { width: min(100%, 1640px); }
+}
+@media (min-width: 2200px) {
+  body { zoom: 1.22; }
+  main { width: min(100%, 1760px); }
+}
+@media (min-width: 2500px) {
+  body { zoom: 1.3; }
+  main { width: min(100%, 1900px); }
+}
+@media (min-width: 3200px) {
+  body { zoom: 1.42; }
+  main { width: min(100%, 2200px); }
+}
+
 @media (max-width: 1080px) {
   .rail {
     inset: auto 12px 12px; width: auto; height: 68px; flex-direction: row; gap: 0;
@@ -318,6 +345,15 @@ select { appearance: none; padding-right: 34px; }
   .shell { margin-left: 0; }
   main { padding-bottom: 112px; }
   .site-foot { padding-bottom: 100px; }
+}
+@media (max-width: 900px) {
+  .topbar { padding: 10px 16px; gap: 10px; }
+  .topbar-left, .topbar-right { gap: 10px; }
+  .clock { display: none; }
+  .budget-mini span { display: none; }
+  .palette-btn span, .palette-btn kbd { display: none; }
+  .palette-btn { padding: 7px; }
+  .route-tag { font-size: 11px; letter-spacing: 0.04em; }
 }
 @media (max-width: 760px) {
   .topbar { padding: 10px 16px; gap: 10px; }

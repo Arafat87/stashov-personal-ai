@@ -1,0 +1,519 @@
+{
+  "reviewed_at": "2026-10-25T11:32:35.626Z",
+  "source_audit_run_at": "2026-10-25T04:47:00.762Z",
+  "vault_before": 1337,
+  "vault_after": 1346,
+  "summary": {
+    "removed_in_audit": 61,
+    "restored": 9,
+    "kept_removed": 52,
+    "by_reason": {
+      "dead_tls": 4,
+      "dead_dns": 20,
+      "unusable": 2,
+      "moved_article_gone": 4,
+      "dead": 11,
+      "moved_no_replacement": 3,
+      "duplicate_root": 5,
+      "moved_content_gone": 2,
+      "product_gone": 1
+    }
+  },
+  "restored": [
+    {
+      "id": "bm_0231",
+      "title": "Seller Pulse | AliExpress",
+      "from": "https://www.seller-pulse.com/ali-express/home2/indexEN.html#intro",
+      "to": "https://www.seller-pulse.com/ali-express-v2/",
+      "section": "business",
+      "reason": "The saved AliExpress app path moved; the live app now lives at /ali-express-v2/."
+    },
+    {
+      "id": "bm_0341",
+      "title": "Viblo — AI Video Editor for Short-Form Content",
+      "from": "https://viblo.ai/index.html",
+      "to": "https://viblo.ai/",
+      "section": "ai",
+      "reason": "The saved /index.html path was removed; the product homepage is live at the root."
+    },
+    {
+      "id": "bm_0422",
+      "title": "Hypefury",
+      "from": "https://app.hypefury.com/create",
+      "to": "https://hypefury.com/",
+      "section": "business",
+      "reason": "The app subdomain no longer resolves; the Hypefury product homepage is live and links to login/signup."
+    },
+    {
+      "id": "bm_0729",
+      "title": "Remote Software Developer Jobs | Remotive.com",
+      "from": "https://remotive.com/remote-jobs/software-dev",
+      "to": "https://remotive.com/remote-jobs/software-development",
+      "section": "career",
+      "reason": "Remotive renamed the category from /software-dev to /software-development; the same listing is live."
+    },
+    {
+      "id": "bm_0749",
+      "title": "Jobright — AI Job Search Copilot",
+      "from": "https://jobright.ai/onboarding/resume",
+      "to": "https://jobright.ai/",
+      "section": "career",
+      "reason": "The onboarding deep link is gone; Jobright's live product homepage is reachable and links to resume tools."
+    },
+    {
+      "id": "bm_0767",
+      "title": "Careers-V2X",
+      "from": "https://careers.vectrus.com/why-gov2x/",
+      "to": "https://careers.gov2x.com/why-gov2x/",
+      "section": "career",
+      "reason": "Vectrus careers moved to the Gov2X careers host; the same Why Gov2X page is live."
+    },
+    {
+      "id": "bm_0799",
+      "title": "Dashboard | micro1 referral platform",
+      "from": "https://refer.micro1.ai/dashboard",
+      "to": "https://refer.micro1.ai/",
+      "section": "career",
+      "reason": "The dashboard path returns 404 to bots, but the live referral login is reachable at the root; verified in a browser."
+    },
+    {
+      "id": "bm_0872",
+      "title": "Best Weapons in Warzone — WZ Ranked",
+      "from": "https://www.wzranked.com/wz2/meta/tierlist",
+      "to": "https://wzranked.com/games/call-of-duty-warzone/meta/weapons",
+      "section": "gaming",
+      "reason": "WZ Ranked moved its Warzone tier list to /games/call-of-duty-warzone/meta/weapons."
+    },
+    {
+      "id": "bm_1328",
+      "title": "Value.app",
+      "from": "https://www.value.app/",
+      "to": "https://value.app/",
+      "section": "business",
+      "reason": "Only the www host fails; the apex domain value.app is live."
+    }
+  ],
+  "kept_removed": [
+    {
+      "id": "bm_0015",
+      "title": "CoverQuick",
+      "url": "https://www.coverquick.co/",
+      "reason_code": "dead_tls",
+      "reason": "The TLS certificate is expired or invalid and HTTP redirects back to the broken HTTPS endpoint."
+    },
+    {
+      "id": "bm_0018",
+      "title": "Openbase: choose the right package every time",
+      "url": "https://openbase.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0042",
+      "title": "JS Bits with Bill",
+      "url": "https://jsbits-yo.com/",
+      "reason_code": "unusable",
+      "reason": "The URL responds, but it serves a directory index or an error page rather than usable content."
+    },
+    {
+      "id": "bm_0060",
+      "title": "Learning JavaScript Design Patterns",
+      "url": "https://www.patterns.dev/posts/classic-design-patterns/",
+      "reason_code": "moved_article_gone",
+      "reason": "The saved article/post is gone; the site root is live but no longer hosts that content."
+    },
+    {
+      "id": "bm_0126",
+      "title": "Picogen | Midjourney API - Seamless REST Integration",
+      "url": "https://picogen.io/?utm_source=twitter&utm_campaign=us&utm_medium=keyword&utm_content=are-you-developer-looking-for-api&twclid=25xusatqjm2drc92756lbhxbmc",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0136",
+      "title": "Depths",
+      "url": "https://depths.so/explore",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0142",
+      "title": "Databutton",
+      "url": "https://databutton.com/home",
+      "reason_code": "moved_no_replacement",
+      "reason": "The product moved or was replaced by an unrelated product; no matching page was found."
+    },
+    {
+      "id": "bm_0164",
+      "title": "#dev30",
+      "url": "https://dev30.xyz/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0171",
+      "title": "Video Gallery",
+      "url": "https://www.echohive.live/?twclid=2-k42l992ugf5bl3165k41aa3a",
+      "reason_code": "dead_tls",
+      "reason": "The TLS certificate is expired or invalid and HTTP redirects back to the broken HTTPS endpoint."
+    },
+    {
+      "id": "bm_0172",
+      "title": "Banner maker - Design and edit banners online - Creatopy",
+      "url": "https://www.creatopy.com/campaigns/banner/?utm_term=&utm_campaign=Performance+Max+-+US&utm_source=adwords&utm_medium=ppc&hsa_acc=1862387392&hsa_cam=16735949719&hsa_grp=&hsa_ad=&hsa_src=x&hsa_tgt=&hsa_kw=&hsa_mt=&hsa_net=adwords&hsa_ver=3&gad_source=1&gclid=CjwKCAjwtqmwBhBVEiwAL-WAYQ4i7WUECE4TRK0rni55jbY1u7FMWRrDMfnulr8Ij8I3j2YGGJ364RoCpqQQAvD_BwE",
+      "reason_code": "moved_no_replacement",
+      "reason": "The product moved or was replaced by an unrelated product; no matching page was found."
+    },
+    {
+      "id": "bm_0197",
+      "title": "Manaflow BI",
+      "url": "https://bi.new/dashboard",
+      "reason_code": "duplicate_root",
+      "reason": "The saved page is gone, but the site root is already in the vault under another bookmark.",
+      "duplicate_of": "bm_0195"
+    },
+    {
+      "id": "bm_0203",
+      "title": "The Brand Bible",
+      "url": "https://thebrandbible.us/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0212",
+      "title": "Free Lightroom Presets - Download Presets for Lightroom from Photonify",
+      "url": "https://photonify.com/free-lightroom-presets/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0233",
+      "title": "Amplify Views",
+      "url": "https://www.skool.com/amplifyviews",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0289",
+      "title": "WEB 4.0: The birth of superintelligent life",
+      "url": "https://web4.ai/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0305",
+      "title": "WOXAI – AI Intelligence for Every Industry",
+      "url": "https://woxai.no/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0344",
+      "title": "Clip Engine | Automated Video Clipping",
+      "url": "https://clipengine.io/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0391",
+      "title": "Tripnotes.ai - Intelligent Travel Planner",
+      "url": "https://tripnotes.ai/app",
+      "reason_code": "moved_no_replacement",
+      "reason": "The product moved or was replaced by an unrelated product; no matching page was found."
+    },
+    {
+      "id": "bm_0396",
+      "title": "Momento | Viral shorts in seconds with AI video editing",
+      "url": "https://studio.momento.fm/?utm_source=www.therundown.ai&utm_medium=newsletter&utm_campaign=google-ceo-warns-about-ai-deepfakes",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0399",
+      "title": "Tome - shape and share your ideas with AI",
+      "url": "https://tome.app/?gclid=Cj0KCQjwk96lBhDHARIsAEKO4xYU8EXnHOy6jGblvKZvd7B5uVDPZ7pZDU3xJs-fxclE1tWB99UIcJAaAla8EALw_wcB",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0417",
+      "title": "DALL·E",
+      "url": "https://labs.openai.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0434",
+      "title": "Playground v2: A new leap in creativity",
+      "url": "https://blog.playgroundai.com/playground-v2/",
+      "reason_code": "moved_article_gone",
+      "reason": "The saved article/post is gone; the site root is live but no longer hosts that content."
+    },
+    {
+      "id": "bm_0437",
+      "title": "Teacher AI",
+      "url": "https://talk.yourteacher.ai/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0438",
+      "title": "Blackbox: AI Code Generation, Code Chat, Code Search - Blackbox",
+      "url": "https://www.blackbox.ai/chat/expert-react",
+      "reason_code": "duplicate_root",
+      "reason": "The saved page is gone, but the site root is already in the vault under another bookmark.",
+      "duplicate_of": "bm_0946"
+    },
+    {
+      "id": "bm_0439",
+      "title": "Welcome to Amplify Views - Full YouTube Course · Amplify Views",
+      "url": "https://www.skool.com/amplifyviews/classroom/30ebbdf6?md=9719cb3367724418b8ae93282f94eb3b",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0467",
+      "title": "Storyblocker: Create Stunning Storyboards with AR & 3D",
+      "url": "https://supertools.therundown.ai/content/storyblocker?utm_source=www.therundown.ai&utm_medium=newsletter&utm_campaign=apple-intelligence-ai-takes-a-time-out",
+      "reason_code": "moved_article_gone",
+      "reason": "The saved article/post is gone; the site root is live but no longer hosts that content."
+    },
+    {
+      "id": "bm_0469",
+      "title": "Pickle - Your AI body double in zoom calls",
+      "url": "https://getpickle.ai/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0734",
+      "title": "Tech Resume MasterList | 2000+ Resume Templates",
+      "url": "https://www.techresumemasterlist.com/",
+      "reason_code": "dead_tls",
+      "reason": "The TLS certificate is expired or invalid and HTTP redirects back to the broken HTTPS endpoint."
+    },
+    {
+      "id": "bm_0741",
+      "title": "Benny, Employee Stock Purchase Plans, ESPP",
+      "url": "https://heybenny.com/refer/lQXG5B9",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0754",
+      "title": "CV Analyst: Career Catalyst",
+      "url": "https://www.cvanalyst.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0762",
+      "title": "GoodPeople.io",
+      "url": "https://www.thegoodpeople.io/",
+      "reason_code": "dead",
+      "reason": "The saved URL returns 404/410 and no live replacement was found."
+    },
+    {
+      "id": "bm_0763",
+      "title": "GoodPeople.io",
+      "url": "https://beta.thegoodpeople.io/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0787",
+      "title": "Spotly: The World's First AI Job Twin",
+      "url": "https://spotly.jobs/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0846",
+      "title": "KiriTalent: Precision Placements",
+      "url": "https://kiritalent.com/#home",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_0986",
+      "title": "Ollie Forsyth | Delphi",
+      "url": "https://www.delphi.ai/neweconomies/talk/conversation/b1aed2a8-620b-4039-bebb-0646b7a37af6",
+      "reason_code": "moved_article_gone",
+      "reason": "The saved article/post is gone; the site root is live but no longer hosts that content."
+    },
+    {
+      "id": "bm_0993",
+      "title": "Arafat Sani | Data portfolio",
+      "url": "https://www.datascienceportfol.io/yasirarafat9287",
+      "reason_code": "moved_content_gone",
+      "reason": "The specific profile/listing is gone; the site root is live but is not equivalent."
+    },
+    {
+      "id": "bm_0996",
+      "title": "Rube Marketplace - Connect & Automate Everything | Composio",
+      "url": "https://rube.app/marketplace",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1106",
+      "title": "Algorithm Visualizer",
+      "url": "https://algorithm-visualizer.org/",
+      "reason_code": "dead_tls",
+      "reason": "The TLS certificate is expired or invalid and HTTP redirects back to the broken HTTPS endpoint."
+    },
+    {
+      "id": "bm_1147",
+      "title": "Teacher AI",
+      "url": "https://talk.yourteacher.ai/login",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1178",
+      "title": "Oats Baker",
+      "url": "https://oatsbaker.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1188",
+      "title": "Polywork | Your AI-powered personal website",
+      "url": "https://www.polywork.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1235",
+      "title": "Caramelized Condensed Milk Toffee - The Foodi House",
+      "url": "https://www.thefoodihouse.com/caramelized-condensed-milk-toffee/",
+      "reason_code": "unusable",
+      "reason": "The URL responds, but it serves a directory index or an error page rather than usable content."
+    },
+    {
+      "id": "bm_1237",
+      "title": "robeytechdeals.com",
+      "url": "https://www.robeytechdeals.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1255",
+      "title": "Wyscout Cart",
+      "url": "https://cart.wyscout.com/en/optout/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1267",
+      "title": "Page not found – DODI Repacks",
+      "url": "https://dodi-repacks.site/all-my-repacks-a-z/",
+      "reason_code": "duplicate_root",
+      "reason": "The saved page is gone, but the site root is already in the vault under another bookmark.",
+      "duplicate_of": "bm_1268"
+    },
+    {
+      "id": "bm_1341",
+      "title": "TheWebPic — Free Image Upload and Image hosting to share your images.",
+      "url": "https://thewebpic.com/",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1373",
+      "title": "Best 3-Line Rifle (VG) Loadouts in Warzone - WZ Ranked",
+      "url": "https://www.wzranked.com/loadouts/vg/3-line-rifle",
+      "reason_code": "duplicate_root",
+      "reason": "The saved page is gone, but the site root is already in the vault under another bookmark.",
+      "duplicate_of": "bm_1374"
+    },
+    {
+      "id": "bm_1376",
+      "title": "【MagicJohn】Invisible Artifact Film -Dust Free Without Bubbles™",
+      "url": "https://www.magicjohntemperedfilm.com/products/dust-free-without-bubbles",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    },
+    {
+      "id": "bm_1377",
+      "title": "Stowfly Location Detail | Package Storage",
+      "url": "https://stowfly.com/package-storage/location/4310/?mll=NDAuODIwNDM3NnwtNzMuOTM5NDk1Mjk5OTk5OTk=",
+      "reason_code": "moved_content_gone",
+      "reason": "The specific profile/listing is gone; the site root is live but is not equivalent."
+    },
+    {
+      "id": "bm_1378",
+      "title": "ALL MY REPACKS, A-Z – DODI Repacks",
+      "url": "https://dodi-repacks.site/index.php/all-my-repacks-a-z/",
+      "reason_code": "duplicate_root",
+      "reason": "The saved page is gone, but the site root is already in the vault under another bookmark.",
+      "duplicate_of": "bm_1268"
+    },
+    {
+      "id": "bm_1383",
+      "title": "Basecamp Twin Gaming Bed Frame with TV Mount, Black",
+      "url": "https://xrockergaming.com/products/basecamp-twin-gaming-bed-frame-with-tv-mount-black",
+      "reason_code": "product_gone",
+      "reason": "The product is no longer in the store catalogue."
+    },
+    {
+      "id": "bm_1397",
+      "title": "Babbel",
+      "url": "https://lp.babbel.com/d/ENG_tutorial.html?l1=ENG&l2=FRA&autostart=advanced&ch=ORG",
+      "reason_code": "dead_dns",
+      "reason": "The domain no longer resolves (NXDOMAIN) on apex or www, so the link cannot open."
+    }
+  ],
+  "sections": [
+    {
+      "id": "education",
+      "label": "Education & Learning",
+      "count": 65
+    },
+    {
+      "id": "programming",
+      "label": "Programming & Dev Tools",
+      "count": 197
+    },
+    {
+      "id": "ai",
+      "label": "AI, Data & Automation",
+      "count": 175
+    },
+    {
+      "id": "career",
+      "label": "Career & Interview Prep",
+      "count": 168
+    },
+    {
+      "id": "business",
+      "label": "Business, Finance & Ideas",
+      "count": 108
+    },
+    {
+      "id": "design",
+      "label": "Design & Creative",
+      "count": 34
+    },
+    {
+      "id": "cyber",
+      "label": "Cybersecurity & OSINT",
+      "count": 17
+    },
+    {
+      "id": "utilities",
+      "label": "Utilities & Life Hacks",
+      "count": 205
+    },
+    {
+      "id": "gaming",
+      "label": "Gaming, Mods & Esports",
+      "count": 28
+    },
+    {
+      "id": "sourcing",
+      "label": "Sourcing & Shipping",
+      "count": 20
+    }
+  ]
+}

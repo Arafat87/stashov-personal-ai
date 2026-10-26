@@ -4,7 +4,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const fmt = (n) => Number(n || 0).toLocaleString('en-US');
-const money = (n, digits = 0) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const money = (n, digits = 0) => {
+  const value = Number(n || 0);
+  return `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+};
 const pad = (n) => String(n).padStart(2, '0');
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = (value) => (/^https?:\/\//i.test(String(value || '')) ? value : '#');
@@ -12,12 +15,17 @@ const safeImage = (value) => {
   const raw = String(value || '').trim();
   return /^https?:\/\//i.test(raw) || /^\/media\/images\/[a-z0-9._-]+$/i.test(raw) ? raw : '';
 };
+const looksLikeImage = (value) => {
+  const raw = String(value || '').trim();
+  return /^\/media\/images\/[a-z0-9._-]+$/i.test(raw) || /^https?:\/\/[^?#]+\.(avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(raw);
+};
 const shortModel = (value) => String(value || '').replace(/^.*\//, '').replace(/^Qwen\/?/i, '');
 const isTyping = (el) => el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
 
 const TABS = {
   deck: 'COMMAND DECK',
   vault: 'SIGNAL INDEX',
+  library: 'REFERENCE LIBRARY',
   wishlist: 'IMPULSE GATE',
   protocols: 'LIVING PLAYBOOKS',
   context: 'IDENTITY BUFFER',
@@ -27,16 +35,34 @@ const TABS = {
 const TITLES = {
   deck: 'Neural Vault Command Deck',
   vault: 'Signal Index',
+  library: 'Reference Library',
   wishlist: 'Impulse Gate',
   protocols: 'Living Playbooks',
   context: 'Identity Buffer',
   ingest: 'Capture Studio',
   router: 'Router Telemetry'
 };
-const SECTION_ICONS = ['i-deck', 'i-vault', 'i-gate', 'i-pulse', 'i-fingerprint', 'i-spark', 'i-router', 'i-search', 'i-command', 'i-coin', 'i-lock', 'i-clock', 'i-alert'];
+const CLUSTER_VISUALS = {
+  'Programming, Cloud & Dev Tools': { slug: 'programming-cloud', color: '#c6ff4a' },
+  'Life Hacks, Utilities & Reference': { slug: 'life-hacks', color: '#63e6ff' },
+  'AI Models, Agents & Infra': { slug: 'ai-models', color: '#a98bff' },
+  'Career, Jobs & Interview Prep': { slug: 'career', color: '#ffc35c' },
+  'Menswear & Streetwear': { slug: 'menswear', color: '#52f2ab' },
+  'Business, Finance & Auto/Real Estate': { slug: 'business', color: '#ff6b8a' },
+  'Watches, Footwear & Accessories': { slug: 'watches', color: '#8ab4ff' },
+  'Gaming, Mods & Esports': { slug: 'gaming', color: '#c6ff4a' },
+  'Soccer Kits & Sportswear': { slug: 'soccer', color: '#63e6ff' },
+  'Skincare, Health & Protocols': { slug: 'skincare', color: '#a98bff' },
+  'Global Sourcing & Proxies': { slug: 'sourcing', color: '#ffc35c' },
+  'Fragrances & Cologne': { slug: 'fragrances', color: '#52f2ab' },
+  'Cybersecurity & NetSec': { slug: 'cybersecurity', color: '#ff6b8a' },
+  'Food, Halal & Specialty Groceries': { slug: 'food', color: '#8ab4ff' },
+};
+const SECTION_ICONS = ['i-deck', 'i-vault', 'i-book', 'i-gate', 'i-pulse', 'i-fingerprint', 'i-spark', 'i-router', 'i-search', 'i-command', 'i-coin', 'i-lock', 'i-clock', 'i-alert', 'i-code', 'i-briefcase'];
 const DEFAULT_SECTIONS = [
   ['deck', 'Deck', 'i-deck', '#c6ff4a'],
   ['vault', 'Vault', 'i-vault', '#63e6ff'],
+  ['library', 'Library', 'i-book', '#8ab4ff'],
   ['wishlist', 'Gate', 'i-gate', '#ffc35c'],
   ['protocols', 'Rules', 'i-pulse', '#a98bff'],
   ['context', 'You', 'i-fingerprint', '#ff6b8a'],
@@ -64,15 +90,26 @@ const state = {
   editingSectionId: null,
   editingCardId: null,
   photoId: null,
+  wishEditOriginal: null,
   category: 'ALL',
   verdict: 'ALL',
+  gateFilter: 'active',
   items: [],
   total: 0,
   limit: 48,
   loadSeq: 0,
   searchTimer: null,
   bookmarkAbort: null,
+  library: {
+    items: [], total: 0, libraryTotal: 0, sections: [], section: 'ALL',
+    q: '', status: 'ALL', limit: 36, loading: false, loaded: false,
+    meta: null, seq: 0, abort: null, editingId: null, timer: null,
+    selectMode: false, selected: [], duplicates: null, duplicateExtra: 0
+  },
+  routineLinkedIds: [],
   auditId: null,
+  promotion: null,
+  clusterDialog: { name: '', mode: 'product', default_mode: 'product', hero_item_id: '', cover: '' },
   firstRender: true,
   paletteIndex: 0,
   paletteFiltered: []
@@ -93,6 +130,7 @@ const sendJSON = (url, method, body) => getJSON(url, {
 });
 const postJSON = (url, body) => sendJSON(url, 'POST', body);
 const putJSON = (url, body) => sendJSON(url, 'PUT', body);
+const patchJSON = (url, body) => sendJSON(url, 'PATCH', body);
 const deleteJSON = (url) => sendJSON(url, 'DELETE');
 
 function toast(message, type = 'ok') {
@@ -149,6 +187,70 @@ function sectionLabel(section) {
   return section ? section.label : 'Section';
 }
 
+function clientDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function routineStreak(dates) {
+  const set = new Set(Array.isArray(dates) ? dates : []);
+  const cursor = new Date();
+  if (!set.has(clientDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (set.has(clientDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function routeState(hash = location.hash) {
+  const raw = String(hash || '').replace(/^#/, '');
+  const [rawTab, rawQuery = ''] = raw.split('?');
+  const params = new URLSearchParams(rawQuery);
+  return {
+    tab: sectionById(rawTab) ? rawTab : 'deck',
+    params,
+  };
+}
+
+function applyRoute(route) {
+  const params = route.params;
+  if (route.tab === 'wishlist') {
+    const gate = String(params.get('gate') || 'active');
+    state.gateFilter = ['active', 'ready', 'cooling', 'snoozed', 'history'].includes(gate) ? gate : 'active';
+    const verdict = String(params.get('verdict') || 'ALL');
+    state.verdict = ['ALL', 'good', 'warn', 'bad'].includes(verdict) ? verdict : 'ALL';
+  }
+  if (route.tab === 'library') {
+    state.library.section = String(params.get('section') || 'ALL');
+    const status = String(params.get('status') || 'ALL');
+    state.library.status = ['ALL', 'ok', 'blocked', 'error', 'unchecked', 'archived'].includes(status) ? status : 'ALL';
+    state.library.q = String(params.get('q') || '');
+    if ($('#librarySearch')) $('#librarySearch').value = state.library.q;
+    if ($('#libraryStatusFilter')) $('#libraryStatusFilter').value = state.library.status;
+  }
+  if (route.tab === 'vault') state.category = String(params.get('cluster') || 'ALL');
+}
+
+function syncHash() {
+  const params = new URLSearchParams();
+  if (state.tab === 'wishlist') {
+    if (state.gateFilter !== 'active') params.set('gate', state.gateFilter);
+    if (state.verdict !== 'ALL') params.set('verdict', state.verdict);
+  } else if (state.tab === 'library') {
+    if (state.library.section !== 'ALL') params.set('section', state.library.section);
+    if (state.library.status !== 'ALL') params.set('status', state.library.status);
+    if (state.library.q) params.set('q', state.library.q);
+  } else if (state.tab === 'vault' && state.category !== 'ALL') {
+    params.set('cluster', state.category);
+  }
+  const query = params.toString();
+  try {
+    history.replaceState(null, '', `#${state.tab}${query ? `?${query}` : ''}`);
+  } catch (_) {}
+}
+
 function setTab(tab, options = {}) {
   syncCustomPanels();
   const available = visibleSections();
@@ -170,13 +272,14 @@ function setTab(tab, options = {}) {
   const title = $('#pageTitle');
   if (title) title.textContent = sectionLabel(target);
   document.title = `STASHOV - ${target.builtin ? (TITLES[tab] || target.label) : target.label}`;
-  if (options.updateHash !== false) {
-    try { history.replaceState(null, '', `#${tab}`); } catch (_) {}
-  }
+  if (options.updateHash !== false) syncHash();
   if (options.scroll !== false) window.scrollTo({ top: 0, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
   const panel = $(`#panel-${tab}`);
   if (panel) {
     window.setTimeout(() => $$('.reveal', panel).forEach((el) => el.classList.add('is-in')), 40);
+  }
+  if (tab === 'library' && !state.library.loading) {
+    loadLibrary(!state.library.loaded);
   }
 }
 
@@ -219,6 +322,7 @@ function renderAll() {
   renderOverview(v);
   renderSections();
   renderCategories(v);
+  renderWantedStrip(v);
   renderWishlistView(v);
   renderProtocolsView(v);
   renderContextView(v);
@@ -229,9 +333,12 @@ function renderAll() {
 
 function budgetNumbers(v) {
   const ctx = v.personal_context || {};
-  const cap = Number(ctx.monthly_discretionary_budget) || 300;
-  const spent = Number(ctx.spent_this_month) || 0;
-  return { cap, spent, remaining: Math.max(0, cap - spent) };
+  const budget = v.budget || {};
+  const rawCap = budget.cap ?? ctx.monthly_discretionary_budget;
+  const cap = rawCap === undefined || rawCap === null || rawCap === '' ? 300 : Math.max(0, Number(rawCap) || 0);
+  const spent = Number(budget.spent ?? ctx.spent_this_month) || 0;
+  const remaining = budget.remaining !== undefined && budget.remaining !== null ? Number(budget.remaining) : cap - spent;
+  return { cap, spent, remaining, budget };
 }
 function totalMarkup(v) {
   return (v.wishlist || []).reduce((sum, w) => sum + Math.max(0, (Number(w.retail_price) || 0) - (Number(w.lowest_verified_price) || 0)), 0);
@@ -271,7 +378,7 @@ function setCounter(el, value, formatter) {
 }
 
 function renderBudget(v) {
-  const { cap, spent, remaining } = budgetNumbers(v);
+  const { cap, spent, remaining, budget } = budgetNumbers(v);
   const top = $('#topBudget');
   if (top) top.textContent = money(remaining);
   const ovRemaining = $('#ovRemaining');
@@ -281,7 +388,9 @@ function renderBudget(v) {
   const ovCap = $('#ovCap');
   if (ovCap) ovCap.textContent = money(cap);
   const month = $('#budgetMonth');
-  if (month) month.textContent = new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
+  if (month) month.textContent = budget.month_short || new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
+  const wlMonth = $('#wlBudgetMonth');
+  if (wlMonth) wlMonth.textContent = String(budget.month_name || new Date().toLocaleString('en-US', { month: 'long' })).toUpperCase();
   const arc = $('#budgetRingArc');
   if (arc) {
     const circumference = 2 * Math.PI * 66;
@@ -291,9 +400,14 @@ function renderBudget(v) {
   const wlRemaining = $('#wlRemaining');
   if (wlRemaining) wlRemaining.textContent = money(remaining);
   const fill = $('#wlRailFill');
-  if (fill) fill.style.width = `${Math.min(100, (spent / Math.max(1, cap)) * 100)}%`;
+  if (fill) {
+    fill.style.width = `${Math.min(100, (spent / Math.max(1, cap)) * 100)}%`;
+    fill.classList.toggle('is-over', Boolean(budget.over_budget));
+  }
   const note = $('#wlSpentNote');
-  if (note) note.textContent = `${money(spent, 2)} spent of ${money(cap, 2)} monthly cap`;
+  if (note) note.textContent = `${money(spent, 2)} spent of ${money(cap, 2)} monthly cap${budget.over_budget ? ' · over budget' : ''}`;
+  const ledgerCount = $('#ledgerCount');
+  if (ledgerCount) ledgerCount.textContent = String((v.spending_ledger || []).length);
   const profileBudget = $('#profileBudget');
   if (profileBudget) profileBudget.textContent = money(cap);
   const profileBudgetSub = $('#profileBudgetSub');
@@ -304,7 +418,7 @@ function renderOverview(v) {
   const wishlist = v.wishlist || [];
   setCounter($('#heroVaultCount'), v.total_bookmarks || 0, fmt);
   setCounter($('#heroSavings'), totalMarkup(v), (n) => money(n));
-  setCounter($('#heroGated'), wishlist.length, fmt);
+  setCounter($('#heroGated'), v.gate && Number.isFinite(v.gate.active) ? v.gate.active : wishlist.length, fmt);
   setCounter($('#ovBookmarkCount'), v.total_bookmarks || 0, fmt);
 
   const counts = v.category_counts || {};
@@ -395,7 +509,8 @@ function renderTicker(v) {
     `${fmt(v.total_bookmarks || 0)} signals indexed`,
     `${Object.keys(v.category_counts || {}).length} clusters mapped`,
     `${money(remaining)} fun-money left`,
-    `${(v.wishlist || []).length} purchases interrogated`,
+    `${v.gate && Number.isFinite(v.gate.active) ? v.gate.active : (v.wishlist || []).length} active wishes interrogated`,
+    `${(v.gate && Array.isArray(v.gate.target_hits) ? v.gate.target_hits.length : 0)} target prices met`,
     `${money(totalMarkup(v))} retail markup caught`,
     'NEMOTRON 3 ULTRA · 1M CONTEXT',
     'NEBIUS TOKEN FACTORY · ROUTING LIVE',
@@ -412,6 +527,12 @@ function sectionIconMarkup(section, className = 'icon') {
   return `<svg class="${className}"><use href="#${icon}"/></svg>`;
 }
 
+function syncRailOverflow() {
+  const nav = $('.rail-nav');
+  if (!nav) return;
+  nav.classList.toggle('is-scrollable', nav.scrollWidth > nav.clientWidth + 2);
+}
+
 function renderSections() {
   const nav = $('.rail-nav');
   if (nav) {
@@ -422,6 +543,7 @@ function renderSections() {
     }).join('');
   }
   syncCustomPanels();
+  window.requestAnimationFrame(syncRailOverflow);
   const active = sectionById(state.tab);
   if (!active || !active.visible) {
     const fallback = visibleSections()[0] || state.sections[0];
@@ -509,9 +631,119 @@ function syncCustomPanels() {
   });
 }
 
-function clusterCover(v, name) {
-  const item = (v.wishlist || []).find((wish) => wish.category === name && safeImage(wish.image));
-  return item ? { image: item.image, title: item.title, brand: item.brand } : null;
+const PRODUCT_CLUSTER_RE = /(menswear|streetwear|fragrance|cologne|perfume|skincare|health|watch|footwear|accessor|soccer|sportswear|food|halal|grocer|auto|car|real estate)/i;
+const CLUSTER_ICON_RULES = [
+  [/programming|dev|cloud/i, 'i-command'],
+  [/ai models|agents|infra/i, 'i-spark'],
+  [/career|jobs|interview/i, 'i-fingerprint'],
+  [/cyber|security/i, 'i-lock'],
+  [/life hacks|utilities|reference/i, 'i-search'],
+  [/gaming|mods|esports/i, 'i-deck'],
+  [/sourcing|proxies/i, 'i-router'],
+  [/business|finance|real estate|auto/i, 'i-coin'],
+  [/food|halal|grocery/i, 'i-coin'],
+  [/skincare|health/i, 'i-pulse'],
+  [/fragrance|cologne/i, 'i-spark'],
+  [/menswear|streetwear/i, 'i-vault'],
+  [/watch|footwear|accessor/i, 'i-clock'],
+  [/soccer|sportswear/i, 'i-spark']
+];
+
+function clusterTone(v, name) {
+  const visual = CLUSTER_VISUALS[name];
+  if (visual) return visual.color;
+  const entries = Object.entries((v && v.category_counts) || {}).sort((a, b) => b[1] - a[1]);
+  const index = entries.findIndex(([entry]) => entry === name);
+  return CAT_COLORS[(index < 0 ? 0 : index) % CAT_COLORS.length];
+}
+
+function clusterCardImage(name) {
+  const visual = CLUSTER_VISUALS[name];
+  return visual ? `/cluster-cards/${visual.slug}.svg` : '';
+}
+
+function clusterMeta(v, name) {
+  const saved = (v && v.cluster_meta && v.cluster_meta[name]) || {};
+  const storedMode = saved.mode === 'product' || saved.mode === 'reference' ? saved.mode : '';
+  const defaultMode = saved.default_mode === 'product' || saved.default_mode === 'reference'
+    ? saved.default_mode
+    : (PRODUCT_CLUSTER_RE.test(name) ? 'product' : 'reference');
+  return {
+    mode: storedMode || defaultMode,
+    default_mode: defaultMode,
+    hero_item_id: saved.hero_item_id || '',
+    cover: saved.cover || '',
+    pinned: Boolean(saved.hero_item_id),
+    custom: Boolean(saved.cover)
+  };
+}
+
+function clusterWishes(v, name) {
+  return ((v && v.wishlist) || []).filter((wish) => wish.category === name);
+}
+
+function clusterHero(v, name, meta) {
+  const wishes = clusterWishes(v, name);
+  if (meta.hero_item_id) {
+    const pinned = wishes.find((wish) => wish.id === meta.hero_item_id && safeImage(wish.image));
+    if (pinned) return pinned;
+  }
+  const rank = { good: 0, warn: 1, bad: 2 };
+  return wishes
+    .filter((wish) => safeImage(wish.image))
+    .sort((a, b) => (rank[verdictTone(a.verdict)] ?? 3) - (rank[verdictTone(b.verdict)] ?? 3))[0] || null;
+}
+
+function clusterIcon(name) {
+  const match = CLUSTER_ICON_RULES.find(([pattern]) => pattern.test(name));
+  return match ? match[1] : 'i-vault';
+}
+
+function clusterDesignMarkup(name, index, label = 'REFERENCE') {
+  return `<span class="cluster-design" aria-hidden="true">
+    <span class="cluster-design-index">${pad(index + 1)}</span>
+    <svg class="icon cluster-design-icon"><use href="#${clusterIcon(name)}"/></svg>
+    <span class="cluster-design-label"><i></i>${esc(label)}</span>
+  </span>`;
+}
+
+function clusterCover(v, name, meta) {
+  if (!meta || meta.mode !== 'product') return null;
+  if (safeImage(meta.cover)) return { image: meta.cover, title: name, brand: 'CUSTOM COVER', pinned: true, custom: true };
+  const hero = clusterHero(v, name, meta);
+  return hero ? { image: hero.image, title: hero.title, brand: hero.brand, hero_id: hero.id, pinned: Boolean(meta.hero_item_id) } : null;
+}
+
+function clusterCardMarkup(v, name, count, index) {
+  const active = state.category === name;
+  const meta = clusterMeta(v, name);
+  const wishes = clusterWishes(v, name);
+  const cover = clusterCover(v, name, meta);
+  const isReference = meta.mode === 'reference';
+  const image = safeImage(cover && cover.image);
+  const referenceCard = clusterCardImage(name);
+  const quickWishes = isReference ? [] : wishes.filter((wish) => safeImage(wish.image)).slice(0, 3);
+  return `
+  <div class="cluster-cell" style="--tone:${clusterTone(v, name)}">
+    <button type="button" class="cluster-card ${active ? 'is-active' : ''} ${isReference ? 'is-reference' : 'is-product'}" data-cat="${esc(name)}" aria-pressed="${active}">
+      <span class="cluster-media">
+        ${isReference
+          ? referenceCard ? `<img src="${esc(referenceCard)}" alt="" loading="lazy" />` : clusterDesignMarkup(name, index)
+          : image ? `<img src="${esc(image)}" alt="" loading="lazy" />`
+            : referenceCard ? `<img src="${esc(referenceCard)}" alt="" loading="lazy" />` : clusterDesignMarkup(name, index, 'AWAITING FIRST WISH')}
+        ${quickWishes.length > 1 ? `<span class="cluster-thumbs" aria-hidden="true">${quickWishes.map((wish, thumbIndex) => `<img src="${esc(safeImage(wish.image))}" alt="" loading="lazy" style="--j:${thumbIndex}" />`).join('')}${wishes.length > 3 ? `<span class="cluster-thumbs-more">+${wishes.length - 3}</span>` : ''}</span>` : ''}
+        <span class="cluster-count">${fmt(count)}</span>
+        ${cover ? `<span class="cluster-want">${cover.custom ? 'CUSTOM' : cover.pinned ? 'PINNED' : 'WANT'}</span>` : ''}
+      </span>
+      <span class="cluster-body">
+        <span class="cluster-index">CLUSTER ${pad(index + 1)}</span>
+        <span class="cluster-name">${esc(name)}</span>
+        <span class="cluster-meta">${fmt(count)} saved${wishes.length ? ` / ${wishes.length} ${wishes.length === 1 ? 'wish' : 'wishes'}` : ''}</span>
+        <span class="cluster-cta">${active ? 'Filtering this cluster' : isReference ? 'Open reference' : 'Open cluster'} <svg class="icon"><use href="#i-arrow"/></svg></span>
+      </span>
+    </button>
+    <button type="button" class="cluster-cover-btn" data-cover="${esc(name)}" aria-label="Change the cover for ${esc(name)}" title="Change cover"><svg class="icon"><use href="#i-image"/></svg></button>
+  </div>`;
 }
 
 function renderCategories(v) {
@@ -525,29 +757,63 @@ function renderCategories(v) {
   if (panelCount) panelCount.textContent = `${entries.length} CLUSTERS`;
   const allCount = $('#clusterAllCount');
   if (allCount) allCount.textContent = fmt(v.total_bookmarks || 0);
-  const wishes = v.wishlist || [];
-  grid.innerHTML = entries.map(([name, count], i) => {
-    const active = state.category === name;
-    const cover = clusterCover(v, name);
-    const wishCount = wishes.filter((wish) => wish.category === name).length;
-    const image = safeImage(cover && cover.image);
-    const initial = String(name || '?').charAt(0).toUpperCase();
-    return `
-    <button type="button" class="cluster-card ${active ? 'is-active' : ''}" data-cat="${esc(name)}" aria-pressed="${active}" style="--tone:${CAT_COLORS[i % CAT_COLORS.length]}">
-      <span class="cluster-media">
-        <span class="media-fallback" aria-hidden="true"><strong>${esc(initial)}</strong><span>Cluster</span></span>
-        ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : ''}
-        <span class="cluster-count">${fmt(count)}</span>
-        ${cover ? '<span class="cluster-want">WANT</span>' : ''}
-      </span>
-      <span class="cluster-body">
-        <span class="cluster-index">CLUSTER ${pad(i + 1)}</span>
-        <span class="cluster-name">${esc(name)}</span>
-        <span class="cluster-meta">${fmt(count)} saved${wishCount ? ` / ${wishCount} ${wishCount === 1 ? 'wish' : 'wishes'}` : ''}</span>
-        <span class="cluster-cta">${active ? 'Filtering this cluster' : 'Open cluster'} <svg class="icon"><use href="#i-arrow"/></svg></span>
-      </span>
-    </button>`;
-  }).join('');
+  grid.innerHTML = entries.map(([name, count], i) => clusterCardMarkup(v, name, count, i)).join('');
+}
+
+function wantedCardMarkup(wish) {
+  const image = safeImage(wish.image);
+  const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
+  const floor = Math.max(0, Number(wish.lowest_verified_price) || 0);
+  const retail = Math.max(0, Number(wish.retail_price) || 0);
+  const hasPrice = floor > 0 || retail > 0;
+  return `
+  <article class="wanted-card">
+    <button type="button" class="wanted-media" data-wish-jump="${esc(wish.id)}" aria-label="Open ${esc(wish.title)} in the Impulse Gate">
+      ${image ? `<img src="${esc(image)}" alt="${esc(wish.title)}" loading="lazy" />` : `<span class="wanted-fallback" aria-hidden="true">${esc(initial)}</span>`}
+      <span class="wanted-verdict ${verdictTone(wish.verdict)}">${esc(wish.verdict_label || 'GATE ACTIVE')}</span>
+    </button>
+    <div class="wanted-body">
+      <p class="wanted-brand">${esc(wish.brand || 'PRIVATE SAVE')}</p>
+      <h5 class="wanted-title">${esc(wish.title)}</h5>
+      <div class="wanted-price">${hasPrice ? `<b>${money(floor, 2)}</b><span>${money(retail, 0)} retail</span>` : '<b>Price pending</b><span>add details</span>'}</div>
+    </div>
+    <a class="wanted-source" href="${esc(safeUrl(wish.url))}" target="_blank" rel="noopener noreferrer">Source <svg class="icon"><use href="#i-external"/></svg></a>
+  </article>`;
+}
+
+function renderWantedStrip(v) {
+  const strip = $('#wantedStrip');
+  if (!strip) return;
+  if (!v || !state.category || state.category === 'ALL') {
+    strip.hidden = true;
+    return;
+  }
+  const name = state.category;
+  const meta = clusterMeta(v, name);
+  if (meta.mode !== 'product') {
+    strip.hidden = true;
+    return;
+  }
+  const allWishes = clusterWishes(v, name);
+  const hero = clusterHero(v, name, meta);
+  const wishes = hero ? [hero, ...allWishes.filter((wish) => wish.id !== hero.id)] : allWishes;
+  strip.hidden = false;
+  strip.style.setProperty('--tone', clusterTone(v, name));
+  if ($('#wantedTitle')) $('#wantedTitle').textContent = name;
+  if ($('#wantedMeta')) {
+    $('#wantedMeta').textContent = `${wishes.length} ${wishes.length === 1 ? 'wish' : 'wishes'} in this cluster · ${meta.pinned ? 'cover pinned' : 'cover auto'}`;
+  }
+  const coverBtn = $('#wantedCoverBtn');
+  if (coverBtn) {
+    coverBtn.dataset.cover = name;
+    coverBtn.hidden = false;
+  }
+  const rail = $('#wantedRail');
+  if (!rail) return;
+  rail.classList.toggle('is-empty', !wishes.length);
+  rail.innerHTML = wishes.length
+    ? wishes.map(wantedCardMarkup).join('')
+    : `<div class="wanted-empty"><p>No wishlist item in this cluster yet. Promote a signal from the index, or set a custom cover.</p><button type="button" class="btn ghost sm" data-cover="${esc(name)}"><svg class="icon"><use href="#i-image"/></svg> Set a cover</button></div>`;
 }
 
 function bookmarkCard(b, index) {
@@ -567,7 +833,7 @@ function bookmarkCard(b, index) {
     <div class="signal-tags">${tags || `<span class="tag">#${esc(b.browser)}</span>`}</div>
     <div class="signal-foot">
       <span class="signal-browser" title="${esc(meta)}">${esc(b.browser)}${b.original_folder ? ' · ' + esc(b.original_folder) : ''}</span>
-      <button type="button" class="gate-btn" data-promote="${esc(b.id)}" aria-label="Promote ${esc(b.title)} into the impulse gate"><svg class="icon"><use href="#i-plus"/></svg> Gate</button>
+      <button type="button" class="gate-btn" data-promote="${esc(b.id)}" aria-label="Review and gate ${esc(b.title)}"><svg class="icon"><use href="#i-gate"/></svg> Review</button>
     </div>
   </article>`;
 }
@@ -657,18 +923,706 @@ function renderBookmarkResults(q) {
   if (more) more.hidden = state.items.length >= state.total || !state.total;
 }
 
+function captureSourceLabel(source) {
+  if (source === 'json-ld') return 'JSON-LD';
+  if (source === 'meta') return 'OpenGraph';
+  if (source === 'dom') return 'visible page text (low confidence)';
+  return 'page metadata';
+}
+
+function closePromotionReview() {
+  state.promotion = null;
+  const dialog = $('#promoteDialog');
+  if (dialog && dialog.open) dialog.close();
+}
+
+function renderPromoteCategories(selected) {
+  const select = $('#promoteCategory');
+  if (!select) return;
+  const counts = (state.vault && state.vault.category_counts) || {};
+  const names = Object.keys(counts).sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || a.localeCompare(b));
+  if (selected && !names.includes(selected)) names.unshift(selected);
+  select.innerHTML = names.map((name) => `<option value="${esc(name)}" ${name === selected ? 'selected' : ''}>${esc(name)}</option>`).join('');
+}
+
+function openPromotionReview(preview, duplicates = []) {
+  const dialog = $('#promoteDialog');
+  if (!dialog || !preview) return;
+  state.promotion = { ...preview, possible_duplicates: Array.isArray(duplicates) ? duplicates : [] };
+  const captured = Number(preview.price) > 0 ? Number(preview.price) : null;
+  state.promotion.capturedPrice = captured;
+  if (!dialog.open) dialog.showModal();
+  if ($('#promoteId')) $('#promoteId').value = preview.bookmark_id || '';
+  if ($('#promoteTitleInput')) $('#promoteTitleInput').value = preview.title || '';
+  if ($('#promoteBrand')) $('#promoteBrand').value = preview.brand || '';
+  renderPromoteCategories(preview.category || '');
+  if ($('#promoteRetail')) $('#promoteRetail').value = priceInputValue(captured);
+  if ($('#promoteFloor')) $('#promoteFloor').value = priceInputValue(captured);
+  if ($('#promoteSource')) $('#promoteSource').value = preview.best_source || '';
+  if ($('#promoteUrl')) {
+    $('#promoteUrl').href = safeUrl(preview.url);
+    $('#promoteUrl').textContent = preview.url || '';
+  }
+  const media = $('#promoteMedia');
+  if (media) {
+    const image = safeImage(preview.image);
+    const initial = String(preview.title || '?').trim().charAt(0).toUpperCase() || '?';
+    media.innerHTML = image
+      ? `<img src="${esc(image)}" alt="${esc(preview.title || 'Product')}" />`
+      : `<span aria-hidden="true">${esc(initial)}</span>`;
+  }
+  const status = $('#promoteCaptureStatus');
+  if (status) {
+    const lowConfidence = captured !== null && preview.price_confidence === 'low';
+    const sourceLabel = preview.capture_mode === 'page' ? 'Read directly from the open product tab' : 'Read from the saved page';
+    status.classList.toggle('is-warn', captured === null || lowConfidence);
+    status.innerHTML = captured !== null
+      ? (lowConfidence
+        ? `<b>${esc(money(captured, 2))} ${esc(preview.currency || 'USD')} captured — verify</b><span>Low-confidence DOM fallback read from visible page text. Confirm or correct it before starting the gate.</span>`
+        : `<b>${esc(money(captured, 2))} ${esc(preview.currency || 'USD')} captured</b><span>${esc(sourceLabel)} via ${esc(captureSourceLabel(preview.price_source))}. Edit it if the page is wrong.</span>`)
+      : `<b>No USD price captured</b><span>${esc(preview.price_reason || 'The page did not expose a public price.')} Enter one below, or start the gate with the price marked pending.</span>`;
+  }
+  const dupeHost = $('#promoteDuplicates');
+  if (dupeHost) {
+    const duplicates = Array.isArray(state.promotion.possible_duplicates) ? state.promotion.possible_duplicates : [];
+    dupeHost.hidden = !duplicates.length;
+    dupeHost.innerHTML = duplicates.length
+      ? `<span class="micro">POSSIBLE DUPLICATE${duplicates.length === 1 ? '' : 'S'} IN THE GATE</span><ul>${duplicates.map((dupe) => `<li><button type="button" data-dupe-jump="${esc(dupe.id)}"><b>${esc(dupe.title)}</b><span>${esc(String(dupe.status || '').toUpperCase())}${dupe.price ? ' · ' + money(dupe.price, 2) : ''}${dupe.same_domain ? ' · SAME STORE' : ''}</span></button></li>`).join('')}</ul>`
+      : '';
+  }
+  const error = $('#promoteError');
+  if (error) error.hidden = true;
+  window.setTimeout(() => {
+    const title = $('#promoteTitleInput');
+    if (title) { title.focus(); title.select(); }
+  }, 60);
+}
+
 async function promoteBookmark(id, btn) {
   if (!id || (btn && btn.disabled)) return;
-  busy(btn, true, 'Gating');
+  busy(btn, true, 'Reading page');
   try {
-    const data = await postJSON('/api/promote-bookmark', { id });
-    toast(data.already_exists ? 'That signal is already inside the impulse gate.' : 'Signal promoted. The 14-day cooldown starts now.');
-    await refreshVault();
-    setTab('wishlist');
+    const data = await postJSON('/api/bookmark-preview', { id });
+    if (data.already_exists) {
+      toast('That signal is already inside the impulse gate.');
+      return;
+    }
+    if (!data.preview) throw new Error('The page preview did not return any details.');
+    openPromotionReview(data.preview, data.possible_duplicates);
   } catch (err) {
     toast(err.message, 'err');
   } finally {
     busy(btn, false);
+  }
+}
+
+async function savePromotion(event) {
+  event.preventDefault();
+  const pending = state.promotion;
+  const id = pending ? pending.bookmark_id : '';
+  const url = pending ? pending.url : '';
+  const title = $('#promoteTitleInput') ? $('#promoteTitleInput').value.trim() : '';
+  const error = $('#promoteError');
+  if (!pending || (!id && !url)) return;
+  if (!title) {
+    if (error) { error.hidden = false; error.textContent = 'Give this wish a title.'; }
+    return;
+  }
+  let retail;
+  let floor;
+  try {
+    retail = readOptionalPrice('#promoteRetail');
+    floor = readOptionalPrice('#promoteFloor');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    return;
+  }
+  if (retail === 0) retail = null;
+  if (floor === 0) floor = null;
+  if (retail === null && floor !== null) retail = floor;
+  if (floor === null && retail !== null) floor = retail;
+  const captured = pending.capturedPrice;
+  const status = retail === null && floor === null
+    ? 'missing'
+    : (captured !== null && retail === captured && floor === captured ? 'captured' : 'manual');
+  let bestSource = $('#promoteSource') ? $('#promoteSource').value.trim() : '';
+  if (status !== 'captured' && (!bestSource || bestSource === pending.best_source)) {
+    bestSource = status === 'manual' ? 'Entered during pre-gate review' : '';
+  }
+  const btn = $('#promoteSubmit');
+  busy(btn, true, 'Starting gate');
+  try {
+    await postJSON('/api/promote-bookmark', {
+      id,
+      url,
+      details: {
+        title,
+        brand: $('#promoteBrand') ? $('#promoteBrand').value.trim() : '',
+        category: $('#promoteCategory') ? $('#promoteCategory').value : (pending.category || ''),
+        retail_price: retail,
+        lowest_verified_price: floor,
+        captured_price: captured,
+        image: pending.image || '',
+        best_source: bestSource,
+        price_source: pending.price_source || 'none',
+        price_confidence: pending.price_confidence || '',
+        price_reason: pending.price_reason || '',
+        capture_mode: pending.capture_mode || ''
+      }
+    });
+    closePromotionReview();
+    if (!id && $('#quickAddUrl')) $('#quickAddUrl').value = '';
+    await refreshVault();
+    setTab('wishlist');
+    if (status === 'captured') toast(`Price confirmed at ${money(floor, 2)}. The 14-day gate starts now.`);
+    else if (status === 'manual') toast(`Reviewed price ${money(floor, 2)} saved as manual. The 14-day gate starts now.`);
+    else toast('Gate started with the price marked pending. Add it from the card so the budget impact is real.', 'warn');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function linkFromClipboard(text) {
+  const match = String(text || '').match(/https?:\/\/[^\s<>"']+/i);
+  return match ? match[0].replace(/[),.;]+$/, '') : '';
+}
+
+function normalizeCaptureUrl(value) {
+  let raw = String(value || '').trim();
+  if (!/^https?:\/\//i.test(raw)) {
+    try { raw = decodeURIComponent(raw); } catch (_) {}
+  }
+  return linkFromClipboard(raw);
+}
+
+function snapshotFromSearch(search) {
+  const params = new URLSearchParams(search || '');
+  const snapshot = {};
+  ['title', 'brand', 'price', 'currency', 'image', 'price_source', 'price_confidence', 'price_reason', 'page_title'].forEach((key) => {
+    const value = params.get(`capture_${key}`);
+    if (value) snapshot[key] = value;
+  });
+  return Object.keys(snapshot).length ? snapshot : null;
+}
+
+async function reviewProductLink(value, btn, snapshot = null) {
+  const input = $('#quickAddUrl');
+  const url = normalizeCaptureUrl(value);
+  if (!url) {
+    toast('Paste a full http(s) product link first.', 'warn');
+    if (input) input.focus();
+    return false;
+  }
+  if (input) input.value = url;
+  busy(btn, true, 'Reading page');
+  try {
+    const payload = { url };
+    if (snapshot && Object.keys(snapshot).length) payload.snapshot = snapshot;
+    const data = await postJSON('/api/bookmark-preview', payload);
+    if (data.already_exists) {
+      toast('That link is already inside the impulse gate.');
+      return true;
+    }
+    if (!data.preview) throw new Error('The page preview did not return any details.');
+    openPromotionReview(data.preview, data.possible_duplicates);
+    return true;
+  } catch (err) {
+    toast(err.message, 'err');
+    return false;
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function quickAddLink(event) {
+  event.preventDefault();
+  const input = $('#quickAddUrl');
+  await reviewProductLink(input ? input.value : '', $('#quickAddBtn'));
+}
+
+function collectPageSnapshot() {
+  const clean = (value, max) => String(value === undefined || value === null ? '' : value)
+    .replace(/\s+/g, ' ').trim().slice(0, max);
+  const parsePrice = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    const text = String(value).replace(/\u00a0/g, ' ').trim();
+    const match = text.match(/-?\d[\d.,]*/);
+    if (!match) return null;
+    let normalized = match[0].replace(/[.,]$/, '');
+    const lastComma = normalized.lastIndexOf(',');
+    const lastDot = normalized.lastIndexOf('.');
+    if (lastComma > lastDot && /,\d{1,2}$/.test(normalized)) {
+      normalized = normalized.replace(/\./g, '').replace(',', '.');
+    } else {
+      normalized = normalized.replace(/,/g, '');
+    }
+    const number = Number(normalized);
+    return Number.isFinite(number) && number > 0 && number < 1e9
+      ? Math.round((number + Number.EPSILON) * 100) / 100
+      : null;
+  };
+  const currencyOf = (value) => {
+    const key = String(value || '').trim().toUpperCase();
+    const aliases = { '$': 'USD', 'US$': 'USD', USD: 'USD', '£': 'GBP', GBP: 'GBP', '€': 'EUR', EUR: 'EUR', 'C$': 'CAD', CAD: 'CAD', 'A$': 'AUD', AUD: 'AUD' };
+    if (aliases[key]) return aliases[key];
+    const code = key.replace(/[^A-Z]/g, '').slice(0, 3);
+    return code.length === 3 ? code : '';
+  };
+  const currencyFromText = (value) => {
+    const text = String(value || '');
+    if (/£|GBP/i.test(text)) return 'GBP';
+    if (/€|EUR/i.test(text)) return 'EUR';
+    if (/\$|USD/i.test(text)) return 'USD';
+    return '';
+  };
+  const nameOf = (value) => {
+    if (Array.isArray(value)) return nameOf(value[0]);
+    if (value && typeof value === 'object') return clean(value.name || value['@id'], 160);
+    return clean(value, 160);
+  };
+  const imageOf = (value) => {
+    if (Array.isArray(value)) return imageOf(value[0]);
+    if (value && typeof value === 'object') return String(value.url || value.contentUrl || value['@id'] || '');
+    return String(value || '');
+  };
+  const metas = new Map();
+  document.querySelectorAll('meta[content]').forEach((el) => {
+    const key = String(el.getAttribute('property') || el.getAttribute('name') || el.getAttribute('itemprop') || '').trim().toLowerCase();
+    const value = el.getAttribute('content') || '';
+    if (key && value && !metas.has(key)) metas.set(key, value);
+  });
+  const nodes = [];
+  document.querySelectorAll('script[type="application/ld+json"]').forEach((script) => {
+    try {
+      const value = JSON.parse(script.textContent || '');
+      if (value) nodes.push(value);
+    } catch (_) {}
+  });
+  const products = [];
+  const walk = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    const type = Array.isArray(value['@type']) ? value['@type'].join(' ') : String(value['@type'] || '');
+    if (/product/i.test(type)) products.push(value);
+    Object.values(value).forEach(walk);
+  };
+  nodes.forEach(walk);
+  let product = products[0] || null;
+  for (const candidate of products) {
+    if (candidate.offers) {
+      product = candidate;
+      break;
+    }
+  }
+  let offerRange = false;
+  const offerOf = (value) => {
+    const offers = Array.isArray(value) ? value : [value];
+    for (const offer of offers) {
+      if (!offer || typeof offer !== 'object') continue;
+      const direct = parsePrice(offer.price);
+      if (direct !== null) {
+        return {
+          price: direct,
+          currency: currencyOf(offer.priceCurrency) || currencyFromText(offer.price) || '',
+        };
+      }
+      const low = parsePrice(offer.lowPrice);
+      const high = parsePrice(offer.highPrice);
+      if (low !== null && high !== null && low !== high) {
+        offerRange = true;
+        continue;
+      }
+      const specs = Array.isArray(offer.priceSpecification) ? offer.priceSpecification : [offer.priceSpecification];
+      const specPrice = specs.map((spec) => spec && parsePrice(spec.price)).find((amount) => amount !== null);
+      const specLow = specs.map((spec) => spec && parsePrice(spec.minPrice)).find((amount) => amount !== null);
+      const specHigh = specs.map((spec) => spec && parsePrice(spec.maxPrice)).find((amount) => amount !== null);
+      if (specPrice === undefined && specLow !== undefined && specHigh !== undefined && specLow !== specHigh) {
+        offerRange = true;
+        continue;
+      }
+      const chosen = specPrice !== undefined ? specPrice : (low !== null ? low : (specLow !== undefined ? specLow : null));
+      if (chosen === null) continue;
+      const specCurrency = specs.map((spec) => spec && (currencyOf(spec.priceCurrency) || currencyFromText(spec.price))).find(Boolean) || '';
+      return {
+        price: chosen,
+        currency: currencyOf(offer.priceCurrency) || specCurrency || currencyFromText(offer.price) || '',
+      };
+    }
+    return null;
+  };
+  const domPrice = () => {
+    const currentToken = /(^|[-_])(sale|current|now|offer|deal|final|discount|reduced|special|clearance)([-_]|$)/i;
+    const compareToken = /(^|[-_])(old|was|compare|strike|strikethrough|line-through|msrp|original)([-_]|$)/i;
+    const selectedToken = /(^|[-_])(selected|is-selected|is-active)([-_]|$)/i;
+    const unsupportedToken = /(^|[-_])(unselected|out-of-stock|sold-out)([-_]|$)/i;
+    const financeText = /(per month|\/\s?mo(?:nth)?\b|monthly|installments?|financ(e|ing)|afterpay|klarna|affirm|sezzle|quadpay|payment plan|payments? of)/i;
+    const shippingText = /(free shipping|shipping on|shipping over|delivery on|orders? over|shipping cost)/i;
+    const startingText = /\b(from|starting at|starting from|as low as)\b/i;
+    const unitText = /(?:\/|per)\s*(?:each|ea|unit|piece|pc|oz|fl\.?\s?oz|ml|g|kg|lb|l|ct|count|pack)\b/i;
+    const rangeSeparator = /\d[\d.,]*\s*(?:-|–|—|\bto\b)\s*[$£€]?\s*\d/i;
+    const compareText = /\b(was|compare at|compare to|msrp|original price)\b/i;
+    const riskyContext = /(recommend|related|carousel|upsell|recently|sponsored|navigation|footer|header|cart|bundle|also-bought)/i;
+    const main = document.querySelector('main, [role="main"]') || document.body;
+    const heading = document.querySelector('h1');
+    const headingTop = heading ? heading.getBoundingClientRect().top : null;
+    const buyButton = main.querySelector('button[name="add" i], button[name*="add-to-cart" i], [data-testid*="add-to-cart" i], [data-testid*="add-to-bag" i], button[class*="add-to-cart" i], button[class*="add-to-bag" i], form[action*="cart" i] button[type="submit"], button[type="submit"][class*="buy" i]')
+      || document.querySelector('button[name="add" i], [data-testid*="add-to-cart" i], [data-testid*="add-to-bag" i]');
+    const buyTop = buyButton ? buyButton.getBoundingClientRect().top : null;
+    const candidates = [];
+    const seen = new Set();
+    let sawRange = false;
+    let sawStarting = false;
+    let sawMultiple = false;
+    const classText = (node) => `${node.className || ''} ${node.id || ''} ${node.getAttribute('aria-label') || ''}`.toLowerCase();
+    const tokenHit = (node, pattern) => {
+      let current = node;
+      let depth = 0;
+      while (current && depth < 3) {
+        const tokens = classText(current).split(/\s+/).filter(Boolean);
+        if (tokens.some((token) => pattern.test(token))) return true;
+        current = current.parentElement;
+        depth += 1;
+      }
+      return false;
+    };
+    const currencyPattern = /([$£€]\s?\d[\d.,]*)|(\d[\d.,]*\s?(?:USD|GBP|EUR|CAD|AUD))|((?:USD|GBP|EUR|CAD|AUD)\s?\d[\d.,]*)/gi;
+    const exactPrice = /^[$£€]?\s*\d[\d.,]*\s*(?:USD|GBP|EUR|CAD|AUD)?$/i;
+    const consider = (el, base) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      if (/^(SCRIPT|STYLE|NOSCRIPT|SVG|PATH|TEMPLATE)$/i.test(el.tagName)) return;
+      if (el.closest('select')) return;
+      const content = el.getAttribute('content') || '';
+      const visible = clean(el.textContent || '', 180);
+      const dataPrice = el.getAttribute('data-price') || el.getAttribute('data-product-price') || '';
+      let text = clean(content || visible || el.getAttribute('aria-label') || '', 180);
+      if (!text && /[.,]|[$£€]/.test(dataPrice)) text = clean(dataPrice, 180);
+      if (!text || text.length > 180) return;
+      if (rangeSeparator.test(text)) { sawRange = true; return; }
+      if (startingText.test(text)) { sawStarting = true; return; }
+      if (financeText.test(text) || shippingText.test(text)) return;
+      if (/^\s*(save|savings|you save)\b/i.test(text) || compareText.test(text)) return;
+      if (el.closest('del, s, [data-a-strike="true"], [data-compare-at-price], [data-was-price]') || tokenHit(el, compareToken)) return;
+      const matches = text.match(currencyPattern) || [];
+      let duplicateAmount = null;
+      if (matches.length > 1) {
+        const parsedMatches = matches.map((match) => parsePrice(match));
+        if (parsedMatches.every((value) => value !== null && value === parsedMatches[0])) duplicateAmount = parsedMatches[0];
+        else { sawMultiple = true; return; }
+      }
+      const attributeAmount = matches.length === 0 && Boolean(content || dataPrice) && /^\d[\d.,]*$/.test(text);
+      if (matches.length === 0 && !attributeAmount) return;
+      const amount = duplicateAmount !== null ? duplicateAmount : parsePrice(matches.length ? matches[0] : text);
+      if (amount === null) return;
+      const priceCurrency = (() => {
+        const scope = el.closest('[itemtype]') || document;
+        const node = scope.querySelector('[itemprop="priceCurrency"]');
+        return currencyOf(
+          (node && (node.getAttribute('content') || node.textContent))
+            || el.getAttribute('data-currency')
+            || el.getAttribute('data-currency-code')
+            || metas.get('product:price:currency')
+            || metas.get('og:price:currency')
+            || metas.get('pricecurrency')
+            || ''
+        ) || currencyFromText(matches[0] || text);
+      })();
+      if (!priceCurrency) return;
+      const style = window.getComputedStyle(el);
+      if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
+      const struck = (() => {
+        let node = el;
+        let depth = 0;
+        while (node && depth < 3) {
+          const computed = node === el ? style : window.getComputedStyle(node);
+          if (computed && /line-through/.test(`${computed.textDecorationLine || ''} ${computed.textDecoration || ''}`)) return true;
+          node = node.parentElement;
+          depth += 1;
+        }
+        return false;
+      })();
+      if (struck) return;
+      const rect = el.getBoundingClientRect();
+      const hasValueAttribute = Boolean(content || dataPrice);
+      if (!hasValueAttribute && rect.width === 0 && rect.height === 0) return;
+      let score = base;
+      const label = classText(el);
+      if (/price|amount|cost|money/.test(label)) score += 10;
+      if (tokenHit(el, currentToken) || /\b(now|sale|clearance)\b/i.test(text)) score += 9;
+      if (exactPrice.test(text)) score += 6;
+      if (!content && unitText.test(text)) score -= 8;
+      if (/\b(list price|retail price)\b/i.test(text)) score -= 10;
+      if (el.closest('button[disabled], [aria-disabled="true"]')) score -= 14;
+      let ancestor = el.parentElement;
+      let depth = 0;
+      let inProduct = false;
+      while (ancestor && depth < 5) {
+        const context = `${ancestor.className || ''} ${ancestor.id || ''} ${ancestor.tagName || ''}`.toLowerCase();
+        if (riskyContext.test(context)) { score -= 22; break; }
+        if (!inProduct && /(product|pdp|buy-box|buybox|product-info)/.test(context)) { score += 5; inProduct = true; }
+        ancestor = ancestor.parentElement;
+        depth += 1;
+      }
+      const selected = el.closest('[aria-checked="true"], [aria-selected="true"], [aria-pressed="true"], [aria-current="true"], [data-selected="true"], option:checked');
+      if (selected || tokenHit(el, selectedToken)) score += 12;
+      if (el.closest('[aria-checked="false"], [aria-selected="false"], [aria-pressed="false"], [data-selected="false"]') || tokenHit(el, unsupportedToken)) score -= 14;
+      const optionLabel = el.closest('label');
+      if (optionLabel) {
+        const input = optionLabel.querySelector('input[type="radio"], input[type="checkbox"]');
+        if (input) score += input.checked ? 12 : -14;
+      }
+      if (headingTop !== null && rect.height) {
+        const distance = Math.abs(rect.top - headingTop);
+        if (distance < 220) score += 8;
+        else if (distance < 650) score += 2;
+        else if (distance > 1400) score -= 5;
+      }
+      if (buyTop !== null && rect.height) {
+        const buyDistance = Math.abs(rect.top - buyTop);
+        if (buyDistance < 260) score += 9;
+        else if (buyDistance > 900) score -= 4;
+      }
+      if (el.closest('main, [role="main"]')) score += 4;
+      candidates.push({ price: amount, currency: priceCurrency, score });
+    };
+    document.querySelectorAll('[itemprop="price"], [data-price], [data-product-price], [data-price-amount]').forEach((el) => consider(el, 30));
+    let inspected = 0;
+    for (const el of main.querySelectorAll('[class*="price" i], [id*="price" i], [aria-label*="price" i], [data-testid*="price" i], [class*="money" i]')) {
+      if (inspected >= 150) break;
+      inspected += 1;
+      consider(el, 8);
+    }
+    if (!candidates.length) {
+      return {
+        price: null,
+        currency: '',
+        reason: sawRange
+          ? 'The page shows a price range for multiple variants. Select a variant or add the exact price.'
+          : sawStarting
+            ? 'The page shows a starting price ("from"). Select a variant or add the exact price.'
+            : sawMultiple
+              ? 'The page shows more than one price. Select a variant or add the exact price.'
+              : 'No visible price was found in the product area.'
+      };
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+    if (best.score < 16) {
+      return { price: null, currency: '', reason: 'The visible price could not be read confidently. Add the exact price yourself.' };
+    }
+    const runnerUp = candidates[1];
+    if (runnerUp && runnerUp.price !== best.price && best.score - runnerUp.score < 6) {
+      return { price: null, currency: '', reason: 'Several variant prices are visible. Choose a variant or add the exact price.' };
+    }
+    return best;
+  };
+  const title = clean(
+    nameOf(product && product.name)
+      || metas.get('og:title')
+      || metas.get('twitter:title')
+      || (document.querySelector('h1') && document.querySelector('h1').textContent)
+      || document.title,
+    220
+  );
+  const brand = clean(
+    nameOf(product && product.brand)
+      || metas.get('og:site_name')
+      || metas.get('application-name')
+      || '',
+    120
+  );
+  let rawImage = product ? imageOf(product.image) : '';
+  rawImage = rawImage
+    || metas.get('og:image:secure_url')
+    || metas.get('og:image')
+    || metas.get('og:image:url')
+    || metas.get('twitter:image')
+    || metas.get('twitter:image:src')
+    || (document.querySelector('link[rel="image_src"]') && document.querySelector('link[rel="image_src"]').getAttribute('href'))
+    || '';
+  if (rawImage) {
+    try { rawImage = new URL(rawImage, document.baseURI).href; } catch (_) { rawImage = ''; }
+  }
+  let price = null;
+  let currency = '';
+  let priceSource = 'none';
+  let priceReason = '';
+  const offer = product ? offerOf(product.offers) : null;
+  if (offer) {
+    price = offer.price;
+    currency = offer.currency;
+    priceSource = 'json-ld';
+  }
+  if (price === null) {
+    const amount = metas.get('product:price:amount') || metas.get('og:price:amount') || metas.get('price') || '';
+    const parsed = parsePrice(amount);
+    if (parsed !== null) {
+      price = parsed;
+      priceSource = 'meta';
+      currency = currencyOf(
+        metas.get('product:price:currency') || metas.get('og:price:currency') || metas.get('pricecurrency')
+      ) || currencyFromText(amount) || 'USD';
+    }
+  }
+  if (price !== null) {
+    currency = currency || 'USD';
+    if (currency !== 'USD') {
+      priceReason = `The page lists ${currency} ${price.toFixed(2)}; the Gate tracks USD, so enter a USD price manually.`;
+      price = null;
+      currency = '';
+    }
+  }
+  if (price === null && !priceReason) {
+    const fallback = domPrice();
+    if (fallback && fallback.price > 0) {
+      price = fallback.price;
+      currency = fallback.currency || 'USD';
+      priceSource = 'dom';
+      if (currency !== 'USD') {
+        priceReason = `The page lists ${currency} ${price.toFixed(2)}; the Gate tracks USD, so enter a USD price manually.`;
+        price = null;
+        currency = '';
+      }
+    } else if (fallback && fallback.reason) {
+      priceReason = fallback.reason;
+    }
+  }
+  if (price === null && !priceReason) {
+    priceReason = offerRange
+      ? 'The page lists a price range for multiple variants. Select a variant or add the exact price.'
+      : 'No public price was found in the page metadata or visible price elements.';
+  }
+  return {
+    title,
+    brand,
+    price: price === null ? '' : String(price),
+    currency,
+    price_source: priceSource,
+    price_confidence: price === null ? '' : priceSource === 'dom' ? 'low' : 'high',
+    price_reason: priceReason,
+    image: clean(rawImage, 1200),
+    page_title: clean(document.title, 220),
+  };
+}
+
+function captureBookmarkletCode() {
+  const target = `${location.origin}/?`;
+  const keys = JSON.stringify(['title', 'brand', 'price', 'currency', 'image', 'price_source', 'price_confidence', 'price_reason', 'page_title']);
+  const extractor = `(${collectPageSnapshot.toString().replace(/\s*\n\s*/g, ' ')})()`;
+  return `javascript:(()=>{let d={};try{d=${extractor}||{};}catch(e){}const q=new URLSearchParams({capture:location.href});${keys}.forEach(k=>{if(d[k])q.set('capture_'+k,d[k]);});let t=${JSON.stringify(target)}+q.toString();if(t.length>7000){q.delete('capture_image');t=${JSON.stringify(target)}+q.toString();}const w=window.open(t,'stashov-capture');if(!w)location.href=t;})();`;
+}
+
+function fillCaptureDialog() {
+  const code = captureBookmarkletCode();
+  const link = $('#captureBookmarklet');
+  if (link) link.href = code;
+  if ($('#captureCode')) $('#captureCode').value = code;
+  if ($('#captureOrigin')) $('#captureOrigin').textContent = location.host;
+}
+
+function openCaptureDialog() {
+  const dialog = $('#captureDialog');
+  if (!dialog) return;
+  fillCaptureDialog();
+  if (!dialog.open) dialog.showModal();
+}
+
+async function copyCaptureBookmarklet(btn) {
+  const code = captureBookmarkletCode();
+  try {
+    await navigator.clipboard.writeText(code);
+    toast('Bookmarklet code copied. Paste it into a new bookmark\u2019s URL field.');
+  } catch (_) {
+    const field = $('#captureCode');
+    if (field) {
+      field.focus();
+      field.select();
+    }
+    toast('Copy the selected code with Ctrl/Cmd+C.', 'warn');
+  }
+}
+
+async function pasteQuickAddLink() {
+  const input = $('#quickAddUrl');
+  const btn = $('#quickAddPaste');
+  if (!navigator.clipboard || !navigator.clipboard.readText) {
+    toast('Clipboard access is not available in this browser. Paste with Ctrl/Cmd+V instead.', 'warn');
+    if (input) input.focus();
+    return;
+  }
+  busy(btn, true, 'Reading');
+  try {
+    const url = linkFromClipboard(await navigator.clipboard.readText());
+    if (!url) {
+      toast('No product link was found on the clipboard.', 'warn');
+      if (input) input.focus();
+      return;
+    }
+    if (input) {
+      input.value = url;
+      input.focus();
+    }
+    toast('Link pasted. Check it, then read the page.');
+  } catch (_) {
+    toast('Clipboard access was blocked. Paste with Ctrl/Cmd+V instead.', 'warn');
+    if (input) input.focus();
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function importVaultFile(file) {
+  const status = $('#dataStatus');
+  if (!file) return;
+  if (file.size > 40 * 1024 * 1024) {
+    toast('That backup is larger than 40 MB. Restore it from the server if it is genuine.', 'err');
+    return;
+  }
+  if (status) status.textContent = `Reading ${file.name}…`;
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch (_) {
+    if (status) status.textContent = 'That file is not valid JSON.';
+    toast('That file is not valid JSON.', 'err');
+    return;
+  }
+  const incoming = payload && payload.vault && typeof payload.vault === 'object' ? payload.vault : payload;
+  const counts = incoming && [
+    ['bookmarks', Array.isArray(incoming.bookmarks) ? incoming.bookmarks.length : null],
+    ['wishes', Array.isArray(incoming.wishlist) ? incoming.wishlist.length : null],
+    ['routines', Array.isArray(incoming.protocols) ? incoming.protocols.length : null],
+  ].filter(([, count]) => count !== null);
+  if (!counts || counts.length < 3) {
+    if (status) status.textContent = 'That file does not look like a Stashov vault.';
+    toast('That file does not look like a Stashov vault.', 'err');
+    return;
+  }
+  const summary = counts.map(([label, count]) => `${fmt(count)} ${label}`).join(', ');
+  if (!window.confirm(`Restore ${summary}?\n\nThis replaces the current vault. A timestamped snapshot is saved in data/backups before the import.`)) {
+    if (status) status.textContent = 'Restore cancelled. Nothing changed.';
+    return;
+  }
+  if (status) status.textContent = 'Restoring and snapshotting the current vault…';
+  try {
+    await postJSON('/api/import', payload);
+    await loadSections();
+    await refreshVault(true);
+    state.library.loaded = false;
+    state.library.items = [];
+    await loadBookmarks(true);
+    if (state.tab === 'library') await loadLibrary(true);
+    if (status) status.textContent = `Restored ${summary}. A pre-import snapshot is in data/backups.`;
+    toast(`Vault restored: ${summary}.`);
+  } catch (err) {
+    if (status) status.textContent = err.message;
+    toast(err.message, 'err');
   }
 }
 
@@ -686,15 +1640,428 @@ async function syncBookmarks(btn) {
   }
 }
 
+/* ————— REFERENCE LIBRARY ————— */
+function librarySectionMeta(id) {
+  return (state.library.sections || []).find((section) => section.id === id) || {
+    id, label: id || 'Reference', color: '#8ab4ff', use_for: 'reference material.'
+  };
+}
+
+function libraryStatus(status) {
+  return ({
+    ok: ['LIVE', 'is-live'],
+    blocked: ['BOT-BLOCKED', 'is-blocked'],
+    error: ['NEEDS REVIEW', 'is-error'],
+    timeout: ['TIMEOUT', 'is-error'],
+    dead: ['DEAD', 'is-dead'],
+    unchecked: ['UNCHECKED', 'is-unchecked']
+  })[status] || ['UNCHECKED', 'is-unchecked'];
+}
+
+function libraryChecked(value) {
+  if (!value) return 'NOT CHECKED';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'CHECKED';
+  return 'CHECKED ' + date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+}
+
+function renderLibrarySections() {
+  const nav = $('#librarySections');
+  if (!nav) return;
+  const sections = state.library.sections || [];
+  const total = state.library.libraryTotal || sections.reduce((sum, section) => sum + section.count, 0);
+  const chips = [{ id: 'ALL', label: 'All sections', count: total }, ...sections];
+  nav.innerHTML = chips.map((section) => `
+    <button type="button" class="filter-chip ${state.library.section === section.id ? 'is-active' : ''}" data-library-section="${esc(section.id)}" aria-pressed="${state.library.section === section.id}">${esc(section.label)} <b>${fmt(section.count)}</b></button>
+  `).join('');
+}
+
+function libraryCardMarkup(item, index) {
+  const section = librarySectionMeta(item.library_section);
+  const status = libraryStatus(item.site_status);
+  const article = /^(education|ai)/.test(section.id || '') ? 'an' : 'a';
+  const description = item.description
+    || `${item.title || item.domain || 'This site'} — ${article} ${String(section.label || 'reference').toLowerCase()} resource.`;
+  const useFor = item.use_for || section.use_for || 'reference material.';
+  const url = safeUrl(item.url);
+  const selected = state.library.selected.includes(item.id);
+  const archived = Boolean(item.archived || item.library_archived);
+  return `
+  <article class="library-card ${selected ? 'is-selected' : ''} ${archived ? 'is-archived' : ''}" data-library-id="${esc(item.id)}" style="--library-tone:${esc(section.color || '#8ab4ff')};--i:${Math.min(index, 10)}">
+    <div class="library-card-top">
+      ${state.library.selectMode ? `<label class="library-pick"><input type="checkbox" data-library-pick="${esc(item.id)}" aria-label="Select ${esc(item.title || item.domain || 'link')}" ${selected ? 'checked' : ''} /><span aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span></label>` : ''}
+      <span class="library-domain" title="${esc(item.domain || '')}">${esc(item.domain || 'unknown')}</span>
+      <span class="library-status ${archived ? 'is-dead' : status[1]}">${archived ? 'ARCHIVED' : status[0]}</span>
+    </div>
+    <h3><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(item.title || item.domain || 'Untitled reference')}</a></h3>
+    <p class="library-description">${esc(description)}</p>
+    <p class="library-use"><b>USE FOR</b> ${esc(useFor)}</p>
+    <div class="library-card-foot">
+      <span class="tag">${esc(section.label)}</span>
+      <span class="library-checked">${esc(libraryChecked(item.last_checked))}</span>
+      <span class="library-card-actions">
+        ${archived ? `<button type="button" class="mini-btn" data-library-restore="${esc(item.id)}" aria-label="Restore ${esc(item.title || item.domain || 'site')}" title="Restore to library"><svg class="icon"><use href="#i-refresh"/></svg></button>` : ''}
+        <button type="button" class="mini-btn" data-library-edit="${esc(item.id)}" aria-label="Edit note for ${esc(item.title || item.domain || 'site')}" title="Edit note"><svg class="icon"><use href="#i-edit"/></svg></button>
+        <a class="mini-btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.title || item.domain || 'site')}" title="Open site"><svg class="icon"><use href="#i-external"/></svg></a>
+      </span>
+    </div>
+  </article>`;
+}
+
+function renderLibrary() {
+  const grid = $('#libraryGrid');
+  if (!grid) return;
+  const L = state.library;
+  if (L.loading && !L.items.length) {
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = Array.from({ length: 6 }).map(() => `
+      <div class="skeleton-card library-skeleton" aria-hidden="true">
+        <div class="skeleton-line w40"></div><div class="skeleton-line w90"></div>
+        <div class="skeleton-line w70"></div><div class="skeleton-line w70"></div>
+        <div class="skeleton-line w40"></div>
+      </div>`).join('');
+  } else if (!L.items.length) {
+    grid.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-book"/></svg><h3>No reference links matched</h3><p>Try a broader search, another section, or clear the status filter. Product and store links stay in the Vault.</p><button type="button" class="btn ghost sm" id="libraryClear">Clear filters</button></div>`;
+    const clear = $('#libraryClear');
+    if (clear) clear.addEventListener('click', () => {
+      L.section = 'ALL';
+      L.q = '';
+      L.status = 'ALL';
+      if ($('#librarySearch')) $('#librarySearch').value = '';
+      if ($('#libraryStatusFilter')) $('#libraryStatusFilter').value = 'ALL';
+      loadLibrary(true);
+    });
+  } else {
+    grid.innerHTML = L.items.map((item, index) => libraryCardMarkup(item, index)).join('');
+  }
+  grid.setAttribute('aria-busy', String(Boolean(L.loading)));
+
+  const count = L.total;
+  const filteredSection = L.section === 'ALL' ? 'ALL SECTIONS' : String(librarySectionMeta(L.section).label || L.section).toUpperCase();
+  if ($('#libraryResultCount')) {
+    $('#libraryResultCount').textContent = `Showing ${fmt(L.items.length)} of ${fmt(count)} reference links${L.q ? ` for “${L.q}”` : ''}.`;
+  }
+  if ($('#libraryActiveSection')) $('#libraryActiveSection').textContent = filteredSection;
+  if ($('#libraryCount')) $('#libraryCount').textContent = fmt(L.libraryTotal);
+  const more = $('#libraryMoreBtn');
+  if (more) more.hidden = L.items.length >= L.total || !L.total;
+
+  const stamp = $('#libraryAuditStamp');
+  if (stamp) {
+    if (L.meta && L.meta.run_at) {
+      const date = new Date(L.meta.run_at);
+      stamp.textContent = `AUDITED ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()} · ${fmt(L.meta.live || 0)} LIVE`;
+    } else {
+      stamp.textContent = 'AWAITING AUDIT';
+    }
+  }
+
+  updateLibraryBulk();
+}
+
+function updateLibraryBulk() {
+  const L = state.library;
+  const count = L.selected.length;
+  const bulk = $('#libraryBulk');
+  if (bulk) bulk.hidden = !L.selectMode;
+  if ($('#libraryBulkCount')) $('#libraryBulkCount').textContent = fmt(count);
+  const selectBtn = $('#librarySelectBtn');
+  if (selectBtn) {
+    selectBtn.setAttribute('aria-pressed', String(L.selectMode));
+    selectBtn.innerHTML = L.selectMode
+      ? '<svg class="icon"><use href="#i-check"/></svg> Done'
+      : '<svg class="icon"><use href="#i-check"/></svg> Select';
+  }
+  const archiveBtn = $('#libraryBulkArchive');
+  const restoreBtn = $('#libraryBulkRestore');
+  const moveBtn = $('#libraryBulkMove');
+  const moveSelect = $('#libraryBulkSection');
+  const archivedView = L.status === 'archived';
+  if (archiveBtn) archiveBtn.hidden = archivedView;
+  if (restoreBtn) restoreBtn.hidden = !archivedView;
+  if (moveBtn) moveBtn.disabled = !count;
+  if (moveSelect) moveSelect.disabled = !count;
+  for (const btn of [archiveBtn, restoreBtn]) if (btn) btn.disabled = !count;
+  const dupeBadge = $('#libraryDupeCount');
+  if (dupeBadge) {
+    dupeBadge.hidden = !L.duplicateExtra;
+    dupeBadge.textContent = fmt(L.duplicateExtra);
+    dupeBadge.title = `${fmt(L.duplicateExtra)} extra cop${L.duplicateExtra === 1 ? 'y' : 'ies'}`;
+  }
+  syncLibraryBulkSections();
+}
+
+function syncLibraryBulkSections() {
+  const select = $('#libraryBulkSection');
+  if (!select) return;
+  const current = select.value;
+  const sections = state.library.sections || [];
+  select.innerHTML = sections.length
+    ? sections.map((section) => `<option value="${esc(section.id)}">${esc(section.label)}</option>`).join('')
+    : '<option value="">No sections</option>';
+  if (current && sections.some((section) => section.id === current)) select.value = current;
+}
+
+async function openLibraryDuplicates() {
+  const dialog = $('#duplicateDialog');
+  if (!dialog) return;
+  if (!dialog.open) dialog.showModal();
+  const body = $('#duplicateBody');
+  if (body) body.innerHTML = '<p class="duplicate-empty">Scanning the library for repeat URLs…</p>';
+  if ($('#duplicateClean')) $('#duplicateClean').disabled = true;
+  try {
+    const data = await getJSON('/api/library/duplicates');
+    state.library.duplicates = data;
+    state.library.duplicateExtra = Number(data.extra) || 0;
+    renderLibraryDuplicates();
+    updateLibraryBulk();
+  } catch (error) {
+    if (body) body.innerHTML = `<p class="duplicate-empty">Could not check for duplicates: ${esc(error.message)}</p>`;
+    toast(error.message, 'err');
+  }
+}
+
+function renderLibraryDuplicates() {
+  const data = state.library.duplicates;
+  const body = $('#duplicateBody');
+  if (!body || !data) return;
+  const groups = Array.isArray(data.groups) ? data.groups : [];
+  if ($('#duplicateSummary')) {
+    $('#duplicateSummary').textContent = groups.length
+      ? `${fmt(groups.length)} page${groups.length === 1 ? '' : 's'} saved more than once — ${fmt(data.extra)} extra cop${data.extra === 1 ? 'y' : 'ies'} can be archived.`
+      : 'No duplicate links. The library is clean.';
+  }
+  if (!groups.length) {
+    body.innerHTML = '<div class="duplicate-empty"><svg class="icon"><use href="#i-check"/></svg><p>Every reference link points at a unique page.</p></div>';
+    if ($('#duplicateClean')) $('#duplicateClean').disabled = true;
+    return;
+  }
+  body.innerHTML = groups.map((group, groupIndex) => `
+    <section class="duplicate-group" data-duplicate-group="${groupIndex}">
+      <header>
+        <span class="library-domain">${esc(group.items[0].library_label || 'Reference')}</span>
+        <span class="library-status is-blocked">${group.items.length} COPIES</span>
+      </header>
+      <h3>${esc(group.title)}</h3>
+      <ul>
+        ${group.items.map((item, itemIndex) => `
+          <li>
+            <label class="duplicate-choice">
+              <input type="radio" name="duplicate-keep-${groupIndex}" value="${esc(item.id)}" ${itemIndex === 0 ? 'checked' : ''} />
+              <span class="duplicate-choice-copy"><b>${esc(item.title || item.domain || 'Untitled')}</b><small>${esc(item.domain || 'unknown')} · ${esc(libraryStatus(item.site_status)[0])}</small></span>
+            </label>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
+  if ($('#duplicateClean')) {
+    $('#duplicateClean').disabled = false;
+    $('#duplicateClean').innerHTML = `<svg class="icon"><use href="#i-check"/></svg> Archive ${fmt(data.extra)} extra cop${data.extra === 1 ? 'y' : 'ies'}`;
+  }
+}
+
+async function archiveDuplicateExtras(btn) {
+  const data = state.library.duplicates;
+  if (!data || !Array.isArray(data.groups) || !data.groups.length) return;
+  const extras = [];
+  data.groups.forEach((group, groupIndex) => {
+    const checked = document.querySelector(`input[name="duplicate-keep-${groupIndex}"]:checked`);
+    const keep = checked ? checked.value : group.items[0].id;
+    for (const item of group.items) if (item.id !== keep) extras.push(item.id);
+  });
+  if (!extras.length) {
+    toast('Every duplicate group already has a single keeper.', 'warn');
+    return;
+  }
+  busy(btn, true, 'Archiving');
+  try {
+    const result = await postJSON('/api/library/bulk', { action: 'archive', ids: extras });
+    toast(`${fmt(result.updated)} extra cop${result.updated === 1 ? 'y' : 'ies'} archived. Recover them under Archived.`);
+    const dialog = $('#duplicateDialog');
+    if (dialog && dialog.open) dialog.close();
+    state.library.duplicates = null;
+    await loadLibrary(true);
+    await openLibraryDuplicates();
+  } catch (error) {
+    toast(error.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function bulkLibrary(action, ids, extra = {}) {
+  if (!ids.length) {
+    toast('Select at least one reference link first.', 'warn');
+    return false;
+  }
+  try {
+    const result = await postJSON('/api/library/bulk', { action, ids, ...extra });
+    const label = action === 'archive' ? 'archived' : action === 'restore' ? 'restored' : 'moved';
+    toast(`${fmt(result.updated)} link${result.updated === 1 ? '' : 's'} ${label}.`);
+    if (action === 'archive') state.library.status = 'archived';
+    if ($('#libraryStatusFilter')) $('#libraryStatusFilter').value = state.library.status;
+    state.library.selected = [];
+    syncHash();
+    await loadLibrary(true);
+    return true;
+  } catch (error) {
+    toast(error.message, 'err');
+    return false;
+  }
+}
+
+async function loadLibrary(reset) {
+  const L = state.library;
+  const seq = ++L.seq;
+  if (L.abort) L.abort.abort();
+  const controller = new AbortController();
+  L.abort = controller;
+  const qInput = $('#librarySearch');
+  const statusInput = $('#libraryStatusFilter');
+  L.q = qInput ? qInput.value.trim() : L.q;
+  L.status = statusInput ? statusInput.value : L.status;
+  if (state.tab === 'library') syncHash();
+  L.loading = true;
+  if (reset) {
+    L.items = [];
+    L.total = 0;
+    L.loaded = false;
+    L.selected = [];
+    renderLibrarySections();
+  }
+  renderLibrary();
+  const params = new URLSearchParams({
+    section: L.section,
+    status: L.status,
+    q: L.q,
+    limit: String(L.limit),
+    offset: String(reset ? 0 : L.items.length)
+  });
+  try {
+    const data = await getJSON('/api/library?' + params.toString(), { signal: controller.signal });
+    if (seq !== L.seq) return;
+    L.total = Number(data.total) || 0;
+    L.libraryTotal = Number(data.library_total) || 0;
+    L.archivedTotal = Number(data.archived_total) || 0;
+    L.duplicateExtra = Number(data.duplicate_extra) || 0;
+    L.sections = Array.isArray(data.sections) ? data.sections : [];
+    L.meta = data.meta || null;
+    L.items = reset ? (data.items || []) : L.items.concat(data.items || []);
+    L.loaded = true;
+    renderLibrarySections();
+    renderLibrary();
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    if (seq !== L.seq) return;
+    L.items = reset ? [] : L.items;
+    renderLibrary();
+    toast(err.message, 'err');
+  } finally {
+    if (L.abort === controller) L.abort = null;
+    L.loading = false;
+    if (seq === L.seq) renderLibrary();
+  }
+}
+
+function openLibraryEdit(id) {
+  const item = state.library.items.find((entry) => entry.id === id);
+  const dialog = $('#libraryEditDialog');
+  if (!item || !dialog) return;
+  state.library.editingId = id;
+  if ($('#libraryEditId')) $('#libraryEditId').value = id;
+  if ($('#libraryEditMeta')) {
+    $('#libraryEditMeta').innerHTML = `<span>${esc(item.domain || '')}</span><strong>${esc(item.title || item.domain || 'Reference')}</strong>`;
+  }
+  const select = $('#libraryEditSection');
+  if (select) {
+    const sections = state.library.sections.length ? state.library.sections : [{ id: item.library_section, label: item.library_label || item.library_section }];
+    select.innerHTML = sections.map((section) => `<option value="${esc(section.id)}">${esc(section.label)}</option>`).join('');
+    select.value = item.library_section || (sections[0] && sections[0].id) || '';
+  }
+  if ($('#libraryEditDescription')) $('#libraryEditDescription').value = item.description || '';
+  if ($('#libraryEditUse')) $('#libraryEditUse').value = item.use_for || '';
+  const open = $('#libraryEditOpen');
+  if (open) open.href = safeUrl(item.url);
+  const error = $('#libraryEditError');
+  if (error) error.hidden = true;
+  if (!dialog.open) dialog.showModal();
+}
+
+async function saveLibraryEdit(event) {
+  event.preventDefault();
+  const id = $('#libraryEditId') ? $('#libraryEditId').value : '';
+  if (!id) return;
+  const error = $('#libraryEditError');
+  const btn = $('#libraryEditSave');
+  const payload = {
+    description: $('#libraryEditDescription') ? $('#libraryEditDescription').value.trim() : '',
+    use_for: $('#libraryEditUse') ? $('#libraryEditUse').value.trim() : '',
+    library_section: $('#libraryEditSection') ? $('#libraryEditSection').value : ''
+  };
+  busy(btn, true, 'Saving');
+  try {
+    await putJSON(`/api/library/${encodeURIComponent(id)}`, payload);
+    const dialog = $('#libraryEditDialog');
+    if (dialog && dialog.open) dialog.close();
+    toast('Library note saved.');
+    await loadLibrary(true);
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
 /* ————— WISHLIST ————— */
+function gateStatusOf(wish) {
+  if (wish.status === 'bought' || wish.status === 'skipped') return wish.status;
+  if (wish.status === 'snoozed') return 'snoozed';
+  if (wish.status === 'ready') return 'ready';
+  if (wish.status === 'cooling') return 'cooling';
+  return Number(wish.cooling_off_days_left) === 0 ? 'ready' : 'cooling';
+}
+
+function isArchivedWish(wish) {
+  const status = gateStatusOf(wish);
+  return status === 'bought' || status === 'skipped';
+}
+
+function gateStatusLabel(wish) {
+  const status = gateStatusOf(wish);
+  if (status === 'ready') return 'Ready — gate cleared';
+  if (status === 'bought') return 'Bought';
+  if (status === 'skipped') return 'Skipped';
+  const left = Math.max(0, Number(wish.cooling_off_days_left) || 0);
+  if (status === 'snoozed') return `Snoozed (${left} ${left === 1 ? 'day' : 'days'} left)`;
+  return `Cooling Off (${left} ${left === 1 ? 'day' : 'days'} left)`;
+}
+
 function renderWishlistView(v) {
   const wishlist = v.wishlist || [];
+  const statusCounts = { cooling: 0, ready: 0, snoozed: 0, bought: 0, skipped: 0 };
+  wishlist.forEach((wish) => { statusCounts[gateStatusOf(wish)] += 1; });
+  const activeCount = statusCounts.cooling + statusCounts.ready + statusCounts.snoozed;
+
+  const statusBar = $('#gateStatusbar');
+  if (statusBar) {
+    const chips = [
+      ['active', 'Active', activeCount],
+      ['ready', 'Ready', statusCounts.ready],
+      ['cooling', 'Cooling', statusCounts.cooling],
+      ['snoozed', 'Snoozed', statusCounts.snoozed],
+      ['history', 'History', statusCounts.bought + statusCounts.skipped]
+    ];
+    statusBar.innerHTML = chips.map(([key, label, count]) => `
+      <button type="button" class="filter-chip gate-status-chip ${state.gateFilter === key ? 'is-active' : ''}" data-gate-filter="${key}" aria-pressed="${state.gateFilter === key}">${label} <b>${count}</b></button>
+    `).join('');
+  }
+
   const filters = $('#verdictFilters');
   if (filters) {
     const counts = { ALL: wishlist.length, good: 0, warn: 0, bad: 0 };
     wishlist.forEach((w) => { counts[verdictTone(w.verdict)] += 1; });
     const chips = [
-      ['ALL', 'All wishes'],
+      ['ALL', 'All verdicts'],
       ['good', 'Approved'],
       ['warn', 'Cooling'],
       ['bad', 'Blocked']
@@ -703,11 +2070,24 @@ function renderWishlistView(v) {
       <button type="button" class="filter-chip ${state.verdict === key ? 'is-active' : ''}" data-verdict="${key}" aria-pressed="${state.verdict === key}">${label} <b>${counts[key]}</b></button>
     `).join('');
   }
+
   const grid = $('#wishlistGrid');
   if (!grid) return;
-  const visible = wishlist.filter((w) => state.verdict === 'ALL' || verdictTone(w.verdict) === state.verdict);
+  const visible = wishlist
+    .filter((w) => {
+      const status = gateStatusOf(w);
+      if (state.gateFilter === 'active') return status !== 'bought' && status !== 'skipped';
+      if (state.gateFilter === 'history') return status === 'bought' || status === 'skipped';
+      return status === state.gateFilter;
+    })
+    .filter((w) => state.verdict === 'ALL' || verdictTone(w.verdict) === state.verdict);
   if (!visible.length) {
-    grid.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-gate"/></svg><h3>No wishes in this lane</h3><p>Change the verdict filter, or promote a bookmark from the signal index to let the gate interrogate it.</p></div>`;
+    const copy = state.gateFilter === 'history'
+      ? 'No purchases or skips logged yet. Decisions will appear here with their ledger context.'
+      : state.gateFilter === 'active'
+        ? 'Every active wish has been archived. Switch to History to review what you bought or skipped.'
+        : 'No wishes in this lifecyle lane. Change the filter, or promote a bookmark from the signal index.';
+    grid.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-gate"/></svg><h3>No wishes in this lane</h3><p>${copy}</p></div>`;
     return;
   }
   grid.innerHTML = visible.map((w, i) => wishCard(w, wishlist.indexOf(w), i)).join('');
@@ -718,48 +2098,540 @@ function gateRow(label, value, icon, warnPattern) {
   return `<div class="gate-check ${warn ? 'is-warn' : ''}"><svg class="icon"><use href="#${icon}"/></svg><b>${label}</b><span>${esc(value || '—')}</span></div>`;
 }
 
+function priceSparkline(w) {
+  const history = (Array.isArray(w.price_history) ? w.price_history : [])
+    .filter((point) => Number(point && point.price) > 0)
+    .slice(-14);
+  if (!history.length) return '';
+  const prices = history.map((point) => Number(point.price));
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const points = prices.map((price, index) => {
+    const x = history.length === 1 ? 0 : (index / (history.length - 1)) * 164;
+    const y = max === min ? 18 : 30 - ((price - min) / (max - min)) * 24;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const spark = history.length >= 2
+    ? `<svg class="price-spark" viewBox="0 0 164 36" role="img" aria-label="Observed price history. Low ${esc(money(min, 2))}, high ${esc(money(max, 2))}."><polyline points="${points}" /></svg>`
+    : '';
+  return `<div class="price-history ${history.length < 2 ? 'is-single' : ''}">
+    ${spark}
+    <div class="price-history-copy"><span>LOWEST SEEN <b>${esc(money(w.lowest_seen_price || min, 2))}</b></span><span>${history.length} observation${history.length === 1 ? '' : 's'} · checked ${esc(validStamp(w.price_checked_at || history[history.length - 1].at))}</span></div>
+  </div>`;
+}
+
 function wishCard(w, originalIndex, renderIndex) {
   const tone = verdictTone(w.verdict);
-  const retail = Math.max(1, Number(w.retail_price) || 0);
-  const floor = Math.max(0, Number(w.lowest_verified_price) || 0);
+  const status = gateStatusOf(w);
+  const archived = status === 'bought' || status === 'skipped';
+  const canBuy = status === 'ready';
+  const coolingLeft = Math.max(0, Number(w.cooling_off_days_left) || 0);
+  const coolingTotal = Math.max(1, Number(w.cooling_off_days) || 14);
+  let coolingProgress = 0;
+  if (status === 'snoozed' && w.snoozed_at && w.snoozed_until) {
+    const start = Date.parse(w.snoozed_at);
+    const end = Date.parse(w.snoozed_until);
+    coolingProgress = end > start ? Math.min(100, Math.max(0, ((Date.now() - start) / (end - start)) * 100)) : 0;
+  } else if (status === 'cooling') {
+    coolingProgress = Math.min(100, Math.max(0, ((coolingTotal - coolingLeft) / coolingTotal) * 100));
+  }
+  const retailValue = Math.max(0, Number(w.retail_price) || 0);
+  const floorValue = Math.max(0, Number(w.lowest_verified_price) || 0);
+  const hasPrice = retailValue > 0 || floorValue > 0;
+  const retail = Math.max(1, retailValue);
+  const floor = floorValue;
   const pct = Math.min(100, Math.max(0, (floor / retail) * 100));
   const saving = Math.max(0, retail - floor);
   const image = safeImage(w.image);
   const initial = String(w.title || '?').trim().charAt(0).toUpperCase() || '?';
+  const target = Number(w.target_price) > 0 ? Number(w.target_price) : null;
+  const targetHit = target !== null && floorValue > 0 && floorValue <= target;
+  const archivedNote = status === 'bought'
+    ? `Bought for ${money(w.purchase_price ?? w.lowest_verified_price, 2)}${w.purchase_source ? ' · ' + esc(w.purchase_source) : ''}`
+    : `Skipped${w.skip_reason ? ' · ' + esc(w.skip_reason) : ''}`;
+  const actionMarkup = archived
+    ? `<div class="gate-archived"><div class="gate-archived-note"><svg class="icon"><use href="#${status === 'bought' ? 'i-check' : 'i-x'}"/></svg><span>${archivedNote}</span></div><button type="button" class="btn ghost sm" data-gate-action="reopen" data-gate-id="${esc(w.id)}"><svg class="icon"><use href="#i-refresh"/></svg>Reopen</button></div>`
+    : `<div class="gate-actions" role="group" aria-label="Gate actions for ${esc(w.title)}">
+        <button type="button" class="btn sm gate-buy" data-gate-action="buy" data-gate-id="${esc(w.id)}" ${canBuy ? '' : 'disabled'} title="${canBuy ? 'Record this purchase in the spend ledger' : `Locked for ${coolingLeft} more ${coolingLeft === 1 ? 'day' : 'days'}`}"><svg class="icon"><use href="#i-coin"/></svg>${canBuy ? 'Buy' : `Locked ${coolingLeft}d`}</button>
+        <button type="button" class="btn ghost sm" data-gate-action="snooze" data-gate-id="${esc(w.id)}" aria-label="Snooze ${esc(w.title)}"><svg class="icon"><use href="#i-clock"/></svg>Snooze</button>
+        <button type="button" class="btn quiet sm" data-gate-action="skip" data-gate-id="${esc(w.id)}" aria-label="Skip ${esc(w.title)}"><svg class="icon"><use href="#i-x"/></svg>Skip</button>
+      </div>`;
+  const lowConfidence = hasPrice && w.price_confidence === 'low';
+  const priceMarkup = hasPrice
+    ? `<div class="price-block">
+      <div class="price-top">
+        <div><span class="price-label">${lowConfidence ? 'LOW-CONFIDENCE PAGE PRICE' : w.price_status === 'captured' ? 'OBSERVED PAGE PRICE' : 'BEST VERIFIED FLOOR'}</span><span class="price-floor">${money(floor, 2)}</span></div>
+        <span class="save-pill">${saving > 0 ? 'SAVE ' + money(saving) : lowConfidence ? 'VERIFY PRICE' : w.price_status === 'captured' ? 'CAPTURED' : 'AT THE FLOOR'}</span>
+      </div>
+      <div class="price-rail" aria-hidden="true"><i class="rail-retail"></i><i class="rail-floor" style="width:${pct}%"></i></div>
+      <div class="price-foot"><span>${money(retail, 0)} retail</span><span>${w.cost_per_use ? money(w.cost_per_use, 2) + ' / use' : 'cost/use pending'}</span><span title="${esc(w.best_source || '')}">${esc(w.best_source || 'Saved discounter')}</span></div>
+      ${lowConfidence ? `<p class="price-provenance is-low">Read from visible page text — verify before checkout.</p>` : w.price_status === 'captured' ? `<p class="price-provenance">Captured from the saved product page${w.price_captured_at ? ' · ' + esc(validStamp(w.price_captured_at)) : ''}${w.price_checked_at ? ' · checked ' + esc(validStamp(w.price_checked_at)) : ''}</p>` : w.price_status === 'manual' ? '<p class="price-provenance is-manual">Manual price — verify before checkout.</p>' : '<p class="price-provenance is-manual">Saved price — not verified from the page.</p>'}
+      ${priceSparkline(w)}
+      ${target !== null ? `<p class="price-target ${targetHit ? 'is-hit' : ''}">TARGET ${esc(money(target, 2))}${targetHit ? ' · MET' : ''}</p>` : ''}
+    </div>`
+    : `<div class="price-block price-missing">
+      <span class="price-label">PRICE NOT CAPTURED</span>
+      <strong>Add what this actually costs</strong>
+      <p>${esc(w.price_note || 'No public price was readable from the saved page.')}</p>
+      <button type="button" class="btn ghost sm" data-wish-edit="${esc(w.id)}"><svg class="icon"><use href="#i-edit"/></svg>Add details</button>
+    </div>`;
   return `
-  <article class="wish ${tone}" style="--i:${Math.min(renderIndex, 9)}">
+  <article class="wish ${tone} ${archived ? 'is-archived' : ''}" data-wish-id="${esc(w.id)}" tabindex="-1" style="--i:${Math.min(renderIndex, 9)}">
     <div class="wish-media">
       <span class="media-fallback" aria-hidden="true"><strong>${esc(initial)}</strong><span>Photo pending</span></span>
       ${image ? `<img src="${esc(image)}" alt="${esc(w.title)}" loading="lazy" />` : ''}
       <button type="button" class="wish-photo-btn" data-wish-photo="${esc(w.id)}" aria-label="${image ? 'Change' : 'Find'} photo for ${esc(w.title)}"><svg class="icon"><use href="#i-image"/></svg><span>${image ? 'Change photo' : 'Find photo'}</span></button>
     </div>
     <div class="wish-top">
-      <div class="wish-id"><span>WL-${pad(originalIndex + 1)}</span><span class="cool-chip">${esc(w.cooling_status || 'Gate active')}</span></div>
-      <span class="verdict" title="${esc(w.verdict_label || '')}">${esc(w.verdict_label || 'GATE ACTIVE')}</span>
+      <div class="wish-id"><span>WL-${pad(originalIndex + 1)}</span><span class="cool-chip is-${status}">${esc(gateStatusLabel(w))}</span></div>
+      <div class="wish-badges">
+        ${targetHit ? '<span class="target-chip is-hit" title="The captured price met your target">TARGET MET</span>' : ''}
+        <span class="verdict" title="${esc(w.verdict_label || '')}">${esc(w.verdict_label || 'GATE ACTIVE')}</span>
+      </div>
     </div>
     <div>
       <p class="wish-brand">${esc(w.brand || 'PRIVATE SAVE')} <span aria-hidden="true">·</span> ${esc(w.category || 'Unclustered')}</p>
       <h3 class="wish-title"><a href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer">${esc(w.title)}</a></h3>
     </div>
-    <div class="price-block">
-      <div class="price-top">
-        <div><span class="price-label">BEST VERIFIED FLOOR</span><span class="price-floor">${money(floor, 2)}</span></div>
-        <span class="save-pill">${saving > 0 ? 'SAVE ' + money(saving) : 'AT THE FLOOR'}</span>
-      </div>
-      <div class="price-rail" aria-hidden="true"><i class="rail-retail"></i><i class="rail-floor" style="width:${pct}%"></i></div>
-      <div class="price-foot"><span>${money(retail, 0)} retail</span><span>${money(w.cost_per_use, 2)} / use</span><span title="${esc(w.best_source || '')}">${esc(w.best_source || 'Saved discounter')}</span></div>
-    </div>
+    ${status === 'cooling' || status === 'snoozed' ? `<div class="gate-timer is-${status}"><div><span>${status === 'snoozed' ? 'SNOOZED' : 'COOLING OFF'}</span><b>${coolingLeft} ${coolingLeft === 1 ? 'day' : 'days'} left</b></div><div class="gate-timer-rail"><i style="width:${coolingProgress}%"></i></div></div>` : ''}
+    ${status === 'ready' ? '<div class="gate-ready-note"><svg class="icon"><use href="#i-check"/></svg><span>Gate cleared — decide deliberately, then log it.</span></div>' : ''}
+    ${priceMarkup}
     <div class="gate-checks">
       ${gateRow('Owned', w.inventory_overlap, 'i-vault', /HIGH|DUPLICATE|OVERLAP/i)}
       ${gateRow('Routine', w.routine_compatibility, 'i-pulse', /CONFLICT|WARNING|BLOCK/i)}
       ${gateRow('Dupe', w.dupe_alternative, 'i-coin')}
     </div>
     <p class="anti-hype">${esc(w.anti_hype_summary || 'No anti-hype read captured yet.')}</p>
+    ${actionMarkup}
     <div class="wish-foot">
       <button type="button" class="btn ghost sm" data-audit="${esc(w.id)}"><svg class="icon"><use href="#i-spark"/></svg> Ask the oracle</button>
+      <button type="button" class="btn ghost sm" data-wish-edit="${esc(w.id)}"><svg class="icon"><use href="#i-edit"/></svg> Details</button>
+      ${/^https?:\/\//i.test(String(w.url || '')) ? `<button type="button" class="btn ghost sm" data-price-refresh="${esc(w.id)}" title="Re-read the saved product page and record the price"><svg class="icon"><use href="#i-refresh"/></svg> Check price</button>` : ''}
       <a class="wish-link" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer" aria-label="Open source for ${esc(w.title)}">Source <svg class="icon"><use href="#i-external"/></svg></a>
     </div>
   </article>`;
+}
+
+function openGateAction(id, action) {
+  const item = state.vault ? (state.vault.wishlist || []).find((wish) => wish.id === id) : null;
+  const dialog = $('#gateActionDialog');
+  if (!item || !dialog) return;
+  const status = gateStatusOf(item);
+  const archived = status === 'bought' || status === 'skipped';
+  if (action === 'buy' && status !== 'ready') {
+    toast(`Locked for ${Math.max(0, Number(item.cooling_off_days_left) || 0)} more ${Number(item.cooling_off_days_left) === 1 ? 'day' : 'days'}.`, 'warn');
+    return;
+  }
+  if (action === 'reopen' && !archived) {
+    toast('Only bought or skipped wishes can be reopened.', 'warn');
+    return;
+  }
+  const isBuy = action === 'buy';
+  const isSnooze = action === 'snooze';
+  const isSkip = action === 'skip';
+  const isReopen = action === 'reopen';
+  if (!isBuy && !isSnooze && !isSkip && !isReopen) return;
+  if ($('#gateActionId')) $('#gateActionId').value = item.id;
+  if ($('#gateActionType')) $('#gateActionType').value = action;
+  if ($('#gateActionKicker')) $('#gateActionKicker').textContent = isBuy ? 'IMPULSE GATE / PURCHASE' : isSnooze ? 'IMPULSE GATE / SNOOZE' : isReopen ? 'IMPULSE GATE / REOPEN' : 'IMPULSE GATE / SKIP';
+  if ($('#gateActionTitle')) $('#gateActionTitle').textContent = isBuy ? 'Record a purchase' : isSnooze ? 'Snooze this wish' : isReopen ? 'Reopen this wish' : 'Skip this wish';
+  if ($('#gateActionCopy')) {
+    $('#gateActionCopy').textContent = isReopen
+      ? status === 'bought'
+        ? `${item.title} · Bought for ${money(item.purchase_price ?? item.lowest_verified_price, 2)}. Reopening voids that purchase in the ledger and returns the wish to the gate.`
+        : `${item.title} · Skipped. Reopening returns it to the gate.`
+      : `${item.title} · ${gateStatusLabel(item)}`;
+  }
+  if ($('#gateActionSubmit')) {
+    const label = isBuy ? 'Record purchase' : isSnooze ? 'Snooze wish' : isReopen ? 'Reopen wish' : 'Skip wish';
+    $('#gateActionSubmit').innerHTML = `<svg class="icon"><use href="#${isReopen ? 'i-refresh' : 'i-check'}"/></svg> ${label}`;
+  }
+  if ($('#gateNoteLabel')) $('#gateNoteLabel').textContent = isBuy ? 'Purchase note (optional)' : isSnooze ? 'Snooze note (optional)' : isReopen ? 'Reason (optional)' : 'Why skip? (optional)';
+  if ($('#gateAmountField')) $('#gateAmountField').hidden = !isBuy;
+  if ($('#gateSourceField')) $('#gateSourceField').hidden = !isBuy;
+  if ($('#gateDaysField')) $('#gateDaysField').hidden = !isSnooze;
+  if ($('#gateNoteField')) $('#gateNoteField').hidden = false;
+  if ($('#gateAmount')) $('#gateAmount').value = Number(item.lowest_verified_price) > 0 ? Number(item.lowest_verified_price).toFixed(2) : '';
+  if ($('#gateSource')) $('#gateSource').value = item.best_source || '';
+  if ($('#gateDays')) $('#gateDays').value = '7';
+  if ($('#gateNote')) $('#gateNote').value = '';
+  const error = $('#gateActionError');
+  if (error) error.hidden = true;
+  renderGateActionBudget();
+  if (!dialog.open) dialog.showModal();
+  if (isBuy && $('#gateAmount')) window.setTimeout(() => $('#gateAmount').focus(), 80);
+}
+
+function renderGateActionBudget() {
+  const el = $('#gateBudgetPreview');
+  if (!el || !state.vault) return;
+  const { cap, spent, remaining } = budgetNumbers(state.vault);
+  const type = $('#gateActionType') ? $('#gateActionType').value : '';
+  if (type === 'buy') {
+    const amount = Number($('#gateAmount') ? $('#gateAmount').value : 0) || 0;
+    const after = remaining - amount;
+    el.innerHTML = `<span>THIS MONTH</span><b>${money(spent, 2)} spent · ${money(remaining, 2)} left</b><small>${amount > 0 ? `After this purchase: ${money(after, 2)}${after < 0 ? ' — over budget' : ''}` : `Cap ${money(cap, 2)}`}</small>`;
+  } else if (type === 'snooze') {
+    el.innerHTML = '<span>SLEEP ON IT</span><b>The wish stays in the gate.</b><small>Budget is only touched when you record a purchase.</small>';
+  } else if (type === 'reopen') {
+    el.innerHTML = `<span>RETURN TO GATE</span><b>The purchase entry is voided, not deleted.</b><small>${money(remaining, 2)} remains available after the correction.</small>`;
+  } else {
+    el.innerHTML = `<span>NO SPEND</span><b>Skipping does not touch the ledger.</b><small>${money(remaining, 2)} remains available this month.</small>`;
+  }
+}
+
+async function submitGateAction(event) {
+  event.preventDefault();
+  const id = $('#gateActionId') ? $('#gateActionId').value : '';
+  const type = $('#gateActionType') ? $('#gateActionType').value : '';
+  if (!id || !type) return;
+  const btn = $('#gateActionSubmit');
+  const error = $('#gateActionError');
+  busy(btn, true, type === 'buy' ? 'Recording' : type === 'snooze' ? 'Snoozing' : type === 'reopen' ? 'Reopening' : 'Skipping');
+  try {
+    let data;
+    if (type === 'buy') {
+      const rawAmount = $('#gateAmount') ? $('#gateAmount').value : '';
+      data = await postJSON(`/api/wishlist/${encodeURIComponent(id)}/buy`, {
+        amount: rawAmount === '' ? undefined : Number(rawAmount),
+        source: $('#gateSource') ? $('#gateSource').value : '',
+        note: $('#gateNote') ? $('#gateNote').value : ''
+      });
+    } else if (type === 'snooze') {
+      data = await postJSON(`/api/wishlist/${encodeURIComponent(id)}/snooze`, {
+        days: Number($('#gateDays') ? $('#gateDays').value : 7),
+        note: $('#gateNote') ? $('#gateNote').value : ''
+      });
+    } else if (type === 'reopen') {
+      data = await postJSON(`/api/wishlist/${encodeURIComponent(id)}/reopen`, {
+        reason: $('#gateNote') ? $('#gateNote').value : ''
+      });
+    } else {
+      data = await postJSON(`/api/wishlist/${encodeURIComponent(id)}/skip`, {
+        reason: $('#gateNote') ? $('#gateNote').value : ''
+      });
+    }
+    const dialog = $('#gateActionDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    if (type === 'buy') toast(`Purchase logged: ${money(data.entry.amount, 2)}. ${money(data.budget.remaining, 2)} left this month.`);
+    else if (type === 'snooze') toast(`Snoozed for ${data.days} days.`);
+    else if (type === 'reopen') toast(`Wish reopened. ${money(data.budget.remaining, 2)} remains available this month.`);
+    else toast('Wish skipped. It moved to History.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function priceInputValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number.toFixed(2) : '';
+}
+
+function readOptionalPrice(selector) {
+  const input = $(selector);
+  if (!input) return null;
+  const raw = input.value.trim();
+  if (raw === '') return null;
+  const number = Number(raw);
+  if (!Number.isFinite(number) || number < 0) throw new Error('Prices must be non-negative numbers.');
+  return Math.round((number + Number.EPSILON) * 100) / 100;
+}
+
+function openWishEdit(id) {
+  const item = state.vault ? (state.vault.wishlist || []).find((wish) => wish.id === id) : null;
+  const dialog = $('#wishEditDialog');
+  if (!item || !dialog) return;
+  if ($('#wishEditId')) $('#wishEditId').value = item.id;
+  if ($('#wishEditTitleInput')) $('#wishEditTitleInput').value = item.title || '';
+  if ($('#wishEditBrand')) $('#wishEditBrand').value = item.brand || '';
+  if ($('#wishEditRetail')) $('#wishEditRetail').value = priceInputValue(item.retail_price);
+  if ($('#wishEditFloor')) $('#wishEditFloor').value = priceInputValue(item.lowest_verified_price);
+  if ($('#wishEditSource')) $('#wishEditSource').value = item.best_source || '';
+  if ($('#wishEditTarget')) $('#wishEditTarget').value = priceInputValue(item.target_price);
+  state.wishEditOriginal = {
+    retail: priceInputValue(item.retail_price),
+    floor: priceInputValue(item.lowest_verified_price),
+    source: item.best_source || '',
+  };
+  if ($('#wishEditUrl')) {
+    $('#wishEditUrl').href = safeUrl(item.url);
+    $('#wishEditUrl').textContent = item.url || '';
+  }
+  if ($('#wishEditProvenance')) {
+    const when = item.price_captured_at ? ` on ${validStamp(item.price_captured_at)}` : '';
+    const hasSavedPrice = Number(item.retail_price) > 0 || Number(item.lowest_verified_price) > 0;
+    const text = item.price_status === 'captured'
+      ? (item.price_confidence === 'low'
+        ? `Low-confidence visible page price${when}. Verify before checkout.`
+        : `Captured from the product page${when}.`)
+      : item.price_status === 'manual'
+        ? `Entered manually${when}. Verify before checkout.`
+        : hasSavedPrice
+          ? 'Saved before capture existed — not verified from the page. Update it to mark it manual.'
+          : (item.price_note || 'No public price was captured. Add one below.');
+    $('#wishEditProvenance').textContent = text;
+  }
+  const error = $('#wishEditError');
+  if (error) error.hidden = true;
+  if (!dialog.open) dialog.showModal();
+  window.setTimeout(() => { if ($('#wishEditTitleInput')) $('#wishEditTitleInput').focus(); }, 60);
+}
+
+async function saveWishEdit(event) {
+  event.preventDefault();
+  const id = $('#wishEditId') ? $('#wishEditId').value : '';
+  const title = $('#wishEditTitleInput') ? $('#wishEditTitleInput').value.trim() : '';
+  const error = $('#wishEditError');
+  if (!id) return;
+  if (!title) {
+    if (error) { error.hidden = false; error.textContent = 'Give this wish a title.'; }
+    return;
+  }
+  let retail;
+  let floor;
+  let target;
+  try {
+    retail = readOptionalPrice('#wishEditRetail');
+    floor = readOptionalPrice('#wishEditFloor');
+    target = readOptionalPrice('#wishEditTarget');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    return;
+  }
+  if (target === 0) target = null;
+  if (retail === null && floor !== null) retail = floor;
+  if (floor === null && retail !== null) floor = retail;
+  const btn = $('#wishEditSaveBtn');
+  const original = state.wishEditOriginal || {};
+  const source = $('#wishEditSource') ? $('#wishEditSource').value.trim() : '';
+  const payload = {
+    title,
+    brand: $('#wishEditBrand') ? $('#wishEditBrand').value.trim() : '',
+    target_price: target,
+  };
+  const retailChanged = (retail === null ? '' : retail.toFixed(2)) !== String(original.retail || '');
+  const floorChanged = (floor === null ? '' : floor.toFixed(2)) !== String(original.floor || '');
+  if (retailChanged || floorChanged) {
+    payload.retail_price = retail;
+    payload.lowest_verified_price = floor;
+  }
+  if (source !== String(original.source || '')) payload.best_source = source;
+  busy(btn, true, 'Saving');
+  try {
+    await patchJSON(`/api/wishlist/${encodeURIComponent(id)}/details`, payload);
+    const dialog = $('#wishEditDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    toast(retailChanged || floorChanged
+      ? (retail === null ? 'Wish marked as price-pending.' : 'Wish details saved. Price is now marked as manual.')
+      : 'Wish details saved. The captured price and its history are unchanged.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function refreshWishPrice(id, btn) {
+  if (!id || (btn && btn.disabled)) return;
+  busy(btn, true, 'Checking');
+  try {
+    const data = await postJSON(`/api/wishlist/${encodeURIComponent(id)}/refresh-price`, {});
+    await refreshVault();
+    const item = data.item || {};
+    if (data.changed) {
+      toast(`Price moved from ${money(data.previous, 2)} to ${money(item.lowest_verified_price, 2)}. Recorded in history.`, 'warn');
+    } else {
+      toast(`Price still ${money(item.lowest_verified_price, 2)}. Observation recorded.`);
+    }
+    if (item.price_confidence === 'low') toast('That price was read from visible page text. Verify it before checkout.', 'warn');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function openBudgetDialog() {
+  const dialog = $('#budgetDialog');
+  const vault = state.vault;
+  if (!dialog || !vault) return;
+  const { budget } = budgetNumbers(vault);
+  if ($('#budgetCapInput')) $('#budgetCapInput').value = Number(budget.cap || 0).toFixed(2);
+  const counts = vault.category_counts || {};
+  const categories = new Set(Object.keys(counts));
+  (budget.category_breakdown || []).forEach((row) => categories.add(row.category));
+  Object.keys(budget.category_budgets || {}).forEach((name) => categories.add(name));
+  const ordered = Array.from(categories).filter(Boolean).sort((a, b) => {
+    const diff = (Number(counts[b]) || 0) - (Number(counts[a]) || 0);
+    return diff || a.localeCompare(b);
+  });
+  const spendByCategory = new Map((budget.category_breakdown || []).map((row) => [row.category, row]));
+  const list = $('#budgetCategoryList');
+  if (list) {
+    list.innerHTML = ordered.length
+      ? ordered.map((name) => {
+          const row = spendByCategory.get(name);
+          const cap = row && row.cap !== null && row.cap !== undefined ? Number(row.cap) : null;
+          const spent = row ? Number(row.spent) || 0 : 0;
+          return `<label class="budget-cat-row"><span class="budget-cat-name">${esc(name)}<small>${money(spent, 2)} spent this month</small></span><span class="budget-cat-input"><b>$</b><input type="number" min="0" step="0.01" inputmode="decimal" data-budget-cat="${esc(name)}" value="${cap === null ? '' : cap.toFixed(2)}" placeholder="No cap" aria-label="Monthly cap for ${esc(name)}" /></span></label>`;
+        }).join('')
+      : '<p class="field-note">No categories are available yet.</p>';
+  }
+  const error = $('#budgetError');
+  if (error) error.hidden = true;
+  if (!dialog.open) dialog.showModal();
+  window.setTimeout(() => { if ($('#budgetCapInput')) $('#budgetCapInput').focus(); }, 60);
+}
+
+async function saveBudget(event) {
+  event.preventDefault();
+  const capRaw = $('#budgetCapInput') ? $('#budgetCapInput').value.trim() : '';
+  const cap = Number(capRaw);
+  const error = $('#budgetError');
+  if (capRaw === '' || !Number.isFinite(cap) || cap < 0) {
+    if (error) { error.hidden = false; error.textContent = 'Enter a monthly cap of $0 or more.'; }
+    return;
+  }
+  const categoryBudgets = {};
+  const inputs = $$('[data-budget-cat]');
+  for (const input of inputs) {
+    const raw = input.value.trim();
+    if (raw === '') continue;
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount < 0) {
+      if (error) { error.hidden = false; error.textContent = `The cap for ${input.dataset.budgetCat} must be $0 or more.`; }
+      return;
+    }
+    categoryBudgets[input.dataset.budgetCat] = amount;
+  }
+  const btn = $('#budgetSaveBtn');
+  const ledgerWasOpen = Boolean($('#ledgerDialog') && $('#ledgerDialog').open);
+  busy(btn, true, 'Saving');
+  try {
+    await putJSON('/api/budget', { cap, category_budgets: categoryBudgets });
+    const dialog = $('#budgetDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    if (ledgerWasOpen) openLedger();
+    toast(`Budget saved: ${money(cap, 2)} monthly cap.`);
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function openVoidDialog(entryId) {
+  const dialog = $('#voidDialog');
+  const entry = state.vault ? (state.vault.spending_ledger || []).find((row) => row.id === entryId) : null;
+  if (!dialog || !entry || entry.voided) return;
+  if ($('#voidEntryId')) $('#voidEntryId').value = entry.id;
+  if ($('#voidCopy')) {
+    $('#voidCopy').textContent = `${entry.title || 'Purchase'} · ${money(entry.amount, 2)} on ${validStamp(entry.spent_at)}. Voiding removes it from the budget${entry.item_id ? ' and reopens its wish' : ''}.`;
+  }
+  if ($('#voidPreview')) {
+    $('#voidPreview').innerHTML = `<span>LEDGER CORRECTION</span><b>${money(entry.amount, 2)} comes back into this month's budget.</b><small>Voided entries stay in the data file for audit.</small>`;
+  }
+  if ($('#voidReason')) $('#voidReason').value = '';
+  const error = $('#voidError');
+  if (error) error.hidden = true;
+  if (!dialog.open) dialog.showModal();
+  window.setTimeout(() => { if ($('#voidReason')) $('#voidReason').focus(); }, 60);
+}
+
+async function submitVoid(event) {
+  event.preventDefault();
+  const id = $('#voidEntryId') ? $('#voidEntryId').value : '';
+  if (!id) return;
+  const error = $('#voidError');
+  const btn = $('#voidSubmit');
+  busy(btn, true, 'Voiding');
+  try {
+    const data = await postJSON(`/api/ledger/${encodeURIComponent(id)}/void`, {
+      reason: $('#voidReason') ? $('#voidReason').value.trim() : ''
+    });
+    const dialog = $('#voidDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    if ($('#ledgerDialog') && $('#ledgerDialog').open) openLedger();
+    toast(data.item ? `Entry voided and "${data.item.title}" reopened.` : 'Ledger entry voided.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function openLedger() {
+  const dialog = $('#ledgerDialog');
+  const vault = state.vault;
+  if (!dialog || !vault) return;
+  const { budget } = budgetNumbers(vault);
+  const ledger = (vault.spending_ledger || []).filter((entry) => !entry.voided);
+  const voidedCount = Number(budget.voided_count) || 0;
+  if ($('#ledgerSub')) {
+    $('#ledgerSub').textContent = `${budget.month_label}: ${money(budget.spent, 2)} spent, ${money(budget.remaining, 2)} remaining${voidedCount ? ` · ${voidedCount} voided` : ''}.`;
+  }
+  const summary = $('#ledgerSummary');
+  if (summary) {
+    summary.innerHTML = `
+      <div class="ledger-stat"><span class="micro">SPENT THIS MONTH</span><strong>${money(budget.spent, 2)}</strong><small>of ${money(budget.cap, 2)} cap</small></div>
+      <div class="ledger-stat ${budget.over_budget ? 'is-over' : ''}"><span class="micro">REMAINING</span><strong>${money(budget.remaining, 2)}</strong><small>${budget.over_budget ? 'over budget' : 'available'}</small></div>
+      <div class="ledger-stat"><span class="micro">ACTIVE ENTRIES</span><strong>${ledger.length}</strong><small>all months</small></div>`;
+  }
+
+  const categories = Array.isArray(budget.category_breakdown) ? budget.category_breakdown : [];
+  const maxSpend = Math.max(1, ...categories.map((row) => Number(row.spent) || 0));
+  const categorySection = categories.length
+    ? `<section class="ledger-categories"><header><b>BY CATEGORY</b><span>${esc(budget.month_label)}</span></header>${categories.map((row) => {
+      const cap = row.cap === null || row.cap === undefined ? null : Number(row.cap);
+      const width = cap !== null && cap > 0
+        ? Math.min(100, Math.max(0, (Number(row.spent) / cap) * 100))
+        : Math.min(100, Math.max(0, (Number(row.spent) / maxSpend) * 100));
+      return `<div class="ledger-cat ${row.over_budget ? 'is-over' : ''}"><div class="ledger-cat-top"><b>${esc(row.category)}</b><span>${money(row.spent, 2)}${cap !== null ? ` of ${money(cap, 2)}` : ''}</span></div><div class="ledger-cat-rail"><i style="width:${width}%"></i></div></div>`;
+    }).join('')}</section>`
+    : '';
+
+  const months = Array.isArray(budget.monthly_totals) ? budget.monthly_totals : [];
+  const historySection = months.length > 1
+    ? `<section class="ledger-history"><header><b>MONTH HISTORY</b><span>ALL ACTIVE ENTRIES</span></header>${months.map((row) => `<div class="ledger-history-row"><span>${esc(row.label)}</span><b>${money(row.total, 2)}</b></div>`).join('')}</section>`
+    : '';
+
+  const list = $('#ledgerList');
+  if (list) {
+    if (!ledger.length) {
+      list.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-coin"/></svg><h3>No active purchases</h3><p>${voidedCount ? 'Every entry has been voided. Voided purchases remain in the data file for audit.' : 'When a wish clears the gate and you record a purchase, it will appear here.'}</p></div>`;
+    } else {
+      const groups = new Map();
+      ledger.forEach((entry) => {
+        const key = entry.month || (entry.spent_at ? String(entry.spent_at).slice(0, 7) : 'unknown');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(entry);
+      });
+      const sorted = Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+      const entrySections = sorted.map(([month, entries]) => {
+        const label = entries[0] && entries[0].spent_at
+          ? new Date(entries[0].spent_at).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+          : month;
+        const total = entries.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+        const rows = entries.map((entry) => {
+          const date = entry.spent_at ? new Date(entry.spent_at).toLocaleString('en-US', { month: 'short', day: 'numeric' }) : '—';
+          return `<li class="ledger-row"><time>${esc(date)}</time><div><strong>${esc(entry.title || 'Purchase')}</strong><span>${esc(entry.category || 'Uncategorized')}${entry.source ? ' · ' + esc(entry.source) : ''}</span></div><div class="ledger-row-end"><b>${money(entry.amount, 2)}</b><button type="button" class="mini-btn danger" data-void-ledger="${esc(entry.id)}" title="Void this ledger entry" aria-label="Void ${esc(entry.title || 'ledger entry')}"><svg class="icon"><use href="#i-x"/></svg></button></div></li>`;
+        }).join('');
+        return `<section class="ledger-month"><header><b>${esc(label)}</b><span>${money(total, 2)}</span></header><ul>${rows}</ul></section>`;
+      }).join('');
+      list.innerHTML = `${categorySection}${historySection}${entrySections}`;
+    }
+  }
+  if (!dialog.open) dialog.showModal();
 }
 
 /* ————— PROTOCOLS ————— */
@@ -769,21 +2641,64 @@ function renderProtocolsView(v) {
   if (counter) counter.textContent = String(list.length);
   const grid = $('#protocolsGrid');
   if (!grid) return;
+
+  const today = clientDateKey();
+  const log = v.routine_log && typeof v.routine_log === 'object' ? v.routine_log : {};
+  const todayHost = $('#routineToday');
+  if (todayHost) {
+    if (!list.length) {
+      todayHost.innerHTML = '';
+    } else {
+      const doneCount = list.filter((protocol) => (Array.isArray(log[protocol.id]) ? log[protocol.id] : []).includes(today)).length;
+      todayHost.innerHTML = `<section class="routine-today-card" aria-labelledby="routineTodayTitle">
+        <header class="routine-today-head">
+          <div><p class="micro">TODAY'S PLAYBOOK</p><h3 id="routineTodayTitle">${doneCount === list.length ? 'Every routine checked off.' : 'What gets done today.'}</h3></div>
+          <span class="routine-today-score"><b>${doneCount}</b>/${list.length} done</span>
+        </header>
+        <div class="routine-today-list">
+          ${list.map((protocol) => {
+            const dates = Array.isArray(log[protocol.id]) ? log[protocol.id] : [];
+            const done = dates.includes(today);
+            const streak = routineStreak(dates);
+            return `<button type="button" class="routine-today-item ${done ? 'is-done' : ''}" data-routine-check="${esc(protocol.id)}" data-routine-done="${done ? 'false' : 'true'}" aria-pressed="${done}">
+              <span class="routine-today-check" aria-hidden="true">${done ? '<svg class="icon"><use href="#i-check"/></svg>' : ''}</span>
+              <span class="routine-today-copy"><b>${esc(protocol.title)}</b><small>${esc(protocol.schedule || 'As needed')}${streak ? ` · ${streak}-day streak` : ''}</small></span>
+            </button>`;
+          }).join('')}
+        </div>
+      </section>`;
+    }
+  }
+
   if (!list.length) {
-    grid.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-pulse"/></svg><h3>No protocols armed</h3><p>Save a life-hack note in the capture studio and the router will compile it into a living rule.</p></div>`;
+    grid.innerHTML = `<div class="empty-state"><svg class="icon"><use href="#i-pulse"/></svg><h3>No routines armed</h3><p>Paste a TikTok, YouTube or product-list routine and generate a structured protocol from it.</p><button type="button" class="btn ghost sm" data-new-routine><svg class="icon"><use href="#i-plus"/></svg> New routine</button></div>`;
     return;
   }
+  const wishById = new Map(((v && v.wishlist) || []).map((wish) => [wish.id, wish]));
   grid.innerHTML = list.map((p, i) => {
     const steps = (p.steps || []).map((step) => `<li>${esc(step)}</li>`).join('');
-    const links = (p.linked_wishlist_ids || []).length;
+    const linkedProducts = (p.linked_wishlist_ids || []).map((id) => wishById.get(id)).filter(Boolean);
+    const links = linkedProducts.length;
+    const productRail = linkedProducts.length
+      ? `<div class="proto-products"><span class="proto-products-label">PRODUCTS IN THIS RULE</span><div class="proto-products-rail">${linkedProducts.slice(0, 4).map((wish, productIndex) => {
+        const image = safeImage(wish.image);
+        const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
+        const price = Number(wish.lowest_verified_price) > 0 ? money(wish.lowest_verified_price, 2) : 'Price pending';
+        return `<button type="button" class="proto-product ${productIndex === 0 ? 'is-featured' : ''}" data-proto-wish="${esc(wish.id)}" title="Open ${esc(wish.title)} in the Gate">
+          ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="proto-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
+          <span class="proto-product-copy"><b>${esc(wish.title)}</b><small>${esc(wish.brand || 'PRIVATE SAVE')} · ${price}</small></span>
+        </button>`;
+      }).join('')}</div></div>`
+      : '';
     return `
-    <article class="protocol" style="--i:${Math.min(i, 8)}">
-      <div class="proto-top"><span class="proto-index">PROTOCOL ${pad(i + 1)}</span><span class="badge-soft">${esc(p.credibility_badge || 'UNVERIFIED')}</span></div>
+    <article class="protocol" style="--i:${Math.min(i, 8)}" data-proto-id="${esc(p.id)}">
+      <div class="proto-top"><span class="proto-index">PROTOCOL ${pad(i + 1)}</span><span class="badge-soft">${esc(p.credibility_badge || 'UNVERIFIED')}</span><span class="proto-actions"><button type="button" class="mini-btn" data-proto-edit="${esc(p.id)}" aria-label="Edit ${esc(p.title)}" title="Edit routine"><svg class="icon"><use href="#i-edit"/></svg></button><button type="button" class="mini-btn danger" data-proto-delete="${esc(p.id)}" aria-label="Delete ${esc(p.title)}" title="Delete routine"><svg class="icon"><use href="#i-trash"/></svg></button></span></div>
       <div>
         <h3 class="proto-title">${esc(p.title)}</h3>
         <p class="proto-sched"><svg class="icon"><use href="#i-clock"/></svg>${esc(p.schedule || 'ALWAYS ON')}</p>
         <p class="proto-source">${esc(p.source_platform || '')}</p>
       </div>
+      ${productRail}
       <div class="conflict"><svg class="icon"><use href="#i-alert"/></svg><span><b>ACTIVE GUARDRAIL</b>${esc(p.conflict_alert || 'Routine conflict checks armed.')}</span></div>
       <ol class="steps">${steps}</ol>
       <div class="proto-foot">
@@ -792,6 +2707,157 @@ function renderProtocolsView(v) {
       </div>
     </article>`;
   }).join('');
+}
+
+function protocolById(id) {
+  return ((state.vault && state.vault.protocols) || []).find((protocol) => protocol.id === id) || null;
+}
+
+function renderRoutineProducts() {
+  const picker = $('#routineProducts');
+  if (!picker) return;
+  const wishes = ((state.vault && state.vault.wishlist) || []);
+  const selected = new Set(state.routineLinkedIds || []);
+  if ($('#routineProductsCount')) {
+    $('#routineProductsCount').textContent = `${selected.size} linked`;
+  }
+  picker.innerHTML = wishes.length ? wishes.map((wish) => {
+    const image = safeImage(wish.image);
+    const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
+    const isSelected = selected.has(wish.id);
+    return `<button type="button" class="routine-product ${isSelected ? 'is-selected' : ''}" data-routine-link="${esc(wish.id)}" aria-pressed="${isSelected}" title="${esc(wish.title)}">
+      ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="routine-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
+      <span class="routine-product-copy"><b>${esc(wish.title)}</b><small>${esc(wish.brand || 'PRIVATE SAVE')}</small></span>
+      <span class="routine-product-check" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
+    </button>`;
+  }).join('') : '<p class="routine-products-empty">No wishlist products yet. Add one from the Gate first.</p>';
+}
+
+function openRoutineDialog(protocol) {
+  const dialog = $('#routineDialog');
+  if (!dialog) return;
+  state.routineLinkedIds = protocol ? (protocol.linked_wishlist_ids || []).slice() : [];
+  const isEdit = Boolean(protocol);
+  if ($('#routineId')) $('#routineId').value = isEdit ? protocol.id : '';
+  if ($('#routineDialogTitle')) $('#routineDialogTitle').textContent = isEdit ? 'Edit routine' : 'Build a routine';
+  if ($('#routinePaste')) $('#routinePaste').value = isEdit ? (protocol.source_text || (protocol.steps || []).join('\n')) : '';
+  if ($('#routineTitle')) $('#routineTitle').value = isEdit ? protocol.title || '' : '';
+  if ($('#routineCategory')) $('#routineCategory').value = isEdit ? protocol.category || '' : 'Skincare, Health & Protocols';
+  if ($('#routineSchedule')) $('#routineSchedule').value = isEdit ? protocol.schedule || '' : 'As needed';
+  if ($('#routineBadge')) $('#routineBadge').value = isEdit ? protocol.credibility_badge || '' : 'User-pasted — verify before use';
+  if ($('#routineSteps')) $('#routineSteps').value = isEdit ? (protocol.steps || []).join('\n') : '';
+  if ($('#routineConflict')) $('#routineConflict').value = isEdit ? protocol.conflict_alert || '' : '';
+  if ($('#routineSource')) $('#routineSource').value = isEdit ? protocol.source_platform || '' : 'Pasted routine (TikTok / YouTube / social)';
+  if ($('#routineParseNote')) $('#routineParseNote').textContent = isEdit ? `Editing ${(protocol.steps || []).length} saved steps.` : 'Nothing parsed yet.';
+  renderRoutineProducts();
+  const error = $('#routineError');
+  if (error) error.hidden = true;
+  if (!dialog.open) dialog.showModal();
+  window.setTimeout(() => { if ($('#routinePaste')) $('#routinePaste').focus(); }, 50);
+}
+
+async function generateRoutine(btn) {
+  const paste = $('#routinePaste') ? $('#routinePaste').value.trim() : '';
+  const error = $('#routineError');
+  if (!paste) {
+    if (error) { error.hidden = false; error.textContent = 'Paste a routine or product list first.'; }
+    if ($('#routinePaste')) $('#routinePaste').focus();
+    return;
+  }
+  if (error) error.hidden = true;
+  busy(btn, true, 'Reading');
+  try {
+    const data = await postJSON('/api/routines/parse', { text: paste });
+    const routine = data.routine || {};
+    state.routineLinkedIds = routine.linked_wishlist_ids || [];
+    if ($('#routineTitle')) $('#routineTitle').value = routine.title || '';
+    if ($('#routineCategory')) $('#routineCategory').value = routine.category || 'Skincare, Health & Protocols';
+    if ($('#routineSchedule')) $('#routineSchedule').value = routine.schedule || 'As needed';
+    if ($('#routineBadge')) $('#routineBadge').value = routine.credibility_badge || 'User-pasted — verify before use';
+    if ($('#routineSteps')) $('#routineSteps').value = (routine.steps || []).join('\n');
+    if ($('#routineConflict')) $('#routineConflict').value = routine.conflict_alert || '';
+    if ($('#routineSource')) $('#routineSource').value = routine.source_platform || 'Pasted routine (TikTok / YouTube / social)';
+    if ($('#routineParseNote')) $('#routineParseNote').textContent = `Structured ${(routine.steps || []).length} steps · ${routine.schedule || 'as needed'}.`;
+    renderRoutineProducts();
+    toast('Routine structured. Review the guardrail, then save.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function saveRoutineForm(event) {
+  event.preventDefault();
+  const id = $('#routineId') ? $('#routineId').value : '';
+  const title = $('#routineTitle') ? $('#routineTitle').value.trim() : '';
+  const steps = ($('#routineSteps') ? $('#routineSteps').value : '').split(/\n+/).map((step) => step.trim()).filter(Boolean);
+  const error = $('#routineError');
+  if (!title) {
+    if (error) { error.hidden = false; error.textContent = 'Give the routine a title.'; }
+    if ($('#routineTitle')) $('#routineTitle').focus();
+    return;
+  }
+  if (!steps.length) {
+    if (error) { error.hidden = false; error.textContent = 'Paste or add at least one step, then generate the structure.'; }
+    if ($('#routinePaste')) $('#routinePaste').focus();
+    return;
+  }
+  if (error) error.hidden = true;
+  const btn = $('#routineSaveBtn');
+  const payload = {
+    title,
+    category: $('#routineCategory') ? $('#routineCategory').value.trim() : '',
+    schedule: $('#routineSchedule') ? $('#routineSchedule').value.trim() : '',
+    credibility_badge: $('#routineBadge') ? $('#routineBadge').value.trim() : '',
+    source_platform: $('#routineSource') ? $('#routineSource').value.trim() : 'Pasted routine',
+    snapshot_status: 'Pasted text — source not archived',
+    conflict_alert: $('#routineConflict') ? $('#routineConflict').value.trim() : '',
+    steps,
+    source_text: $('#routinePaste') ? $('#routinePaste').value.trim() : '',
+    linked_wishlist_ids: state.routineLinkedIds
+  };
+  busy(btn, true, 'Saving');
+  try {
+    if (id) await putJSON(`/api/protocols/${encodeURIComponent(id)}`, payload);
+    else await postJSON('/api/protocols', payload);
+    const dialog = $('#routineDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    toast(id ? 'Routine updated.' : 'Routine saved to Rules.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function removeProtocol(id) {
+  const protocol = protocolById(id);
+  if (!protocol || !window.confirm(`Delete “${protocol.title}”?`)) return;
+  try {
+    await deleteJSON(`/api/protocols/${encodeURIComponent(id)}`);
+    await refreshVault();
+    toast('Routine deleted.');
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+}
+
+async function toggleRoutineToday(id, done, btn) {
+  if (!id || (btn && btn.disabled)) return;
+  busy(btn, true, done ? 'Checking off' : 'Reopening');
+  try {
+    await postJSON(`/api/protocols/${encodeURIComponent(id)}/today`, { done });
+    await refreshVault();
+    toast(done ? 'Routine checked off for today.' : 'Today\'s check-off removed.');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
 }
 
 /* ————— CONTEXT ————— */
@@ -1046,6 +3112,8 @@ function paletteActions() {
   return [
     ...sections,
     { label: 'Search the vault', hint: '/', icon: 'i-search', run: () => { setTab('vault'); window.setTimeout(() => { const el = $('#bmSearchInput'); if (el) el.focus(); }, 160); } },
+    { label: 'Add a product link to the gate', hint: 'Gate', icon: 'i-plus', run: () => { setTab('wishlist'); window.setTimeout(() => { const el = $('#quickAddUrl'); if (el) el.focus(); }, 180); } },
+    { label: 'Get the one-click capture bookmarklet', icon: 'i-spark', run: () => openCaptureDialog() },
     { label: 'Ask the 1M-context oracle', icon: 'i-command', run: () => { setTab('router'); window.setTimeout(() => { const el = $('#auditInput'); if (el) el.focus(); }, 180); } },
     { label: 'Customize sidebar sections', icon: 'i-edit', run: () => openSectionsDialog() },
     { label: 'Run Nebius serverless job', icon: 'i-refresh', run: () => runServerlessJob($('#jobBtn')) },
@@ -1517,6 +3585,155 @@ async function savePhotoForm(event) {
   }
 }
 
+function renderClusterDialog() {
+  const dialog = $('#clusterDialog');
+  const d = state.clusterDialog;
+  if (!dialog || !d.name || !state.vault) return;
+  const v = state.vault;
+  const meta = clusterMeta(v, d.name);
+  const wishes = clusterWishes(v, d.name);
+  const hero = d.hero_item_id
+    ? wishes.find((wish) => wish.id === d.hero_item_id)
+    : clusterHero(v, d.name, meta);
+
+  if ($('#clusterDialogTitle')) $('#clusterDialogTitle').textContent = d.name;
+  if ($('#clusterDialogSub')) {
+    $('#clusterDialogSub').textContent = `${wishes.length} ${wishes.length === 1 ? 'wish' : 'wishes'} · ${d.mode === 'product' ? 'photo-led cluster' : 'typographic reference cluster'}`;
+  }
+  $$('[data-cluster-mode]', dialog).forEach((btn) => {
+    const active = btn.dataset.clusterMode === d.mode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  const heroField = $('#clusterHeroField');
+  if (heroField) heroField.hidden = d.mode === 'reference';
+  const coverField = $('#clusterCoverField');
+  if (coverField) coverField.hidden = d.mode === 'reference';
+  if ($('#clusterModeNote')) {
+    $('#clusterModeNote').textContent = d.mode === 'reference'
+      ? 'Reference mode uses this cluster\u2019s generated reference card. Switch to Product photos to feature an exact wish.'
+      : 'Product mode uses the exact wishlist photo. Switch to Reference card to use this cluster\u2019s generated cover.';
+  }
+
+  const coverInput = $('#clusterCoverUrl');
+  if (coverInput && document.activeElement !== coverInput) coverInput.value = d.cover || '';
+
+  const picker = $('#clusterHeroPicker');
+  if (picker) {
+    const auto = `<button type="button" class="hero-option ${d.hero_item_id ? '' : 'is-selected'}" data-hero="">
+      <span class="hero-auto">AUTO</span>
+      <span class="hero-copy"><b>Best available wish</b><small>${wishes.length ? 'Highest verdict in this cluster' : 'No wishes in this cluster yet'}</small></span>
+    </button>`;
+    const options = wishes.map((wish) => {
+      const image = safeImage(wish.image);
+      const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
+      return `<button type="button" class="hero-option ${d.hero_item_id === wish.id ? 'is-selected' : ''}" data-hero="${esc(wish.id)}">
+        ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="hero-thumb-fallback" aria-hidden="true">${esc(initial)}</span>`}
+        <span class="hero-copy"><b>${esc(wish.title)}</b><small>${esc(wish.brand || 'PRIVATE SAVE')} · ${money(wish.lowest_verified_price, 2)}</small></span>
+      </button>`;
+    }).join('');
+    picker.innerHTML = auto + options;
+  }
+
+  const preview = $('#clusterPreview');
+  if (preview) {
+    const entries = Object.entries(v.category_counts || {}).sort((a, b) => b[1] - a[1]);
+    const index = Math.max(0, entries.findIndex(([entry]) => entry === d.name));
+    preview.style.setProperty('--tone', clusterTone(v, d.name));
+    const referenceCard = clusterCardImage(d.name);
+    preview.innerHTML = d.mode === 'reference'
+      ? referenceCard ? `<img src="${esc(referenceCard)}" alt="" />` : clusterDesignMarkup(d.name, index, 'REFERENCE')
+      : looksLikeImage(d.cover) || safeImage(hero && hero.image)
+        ? `<img src="${esc(looksLikeImage(d.cover) ? d.cover : hero.image)}" alt="" />`
+        : referenceCard ? `<img src="${esc(referenceCard)}" alt="" />` : clusterDesignMarkup(d.name, index, 'AWAITING FIRST WISH');
+  }
+}
+
+function openClusterDialog(name) {
+  const dialog = $('#clusterDialog');
+  if (!dialog || !state.vault || !name) return;
+  const meta = clusterMeta(state.vault, name);
+  state.clusterDialog = {
+    name,
+    mode: meta.mode,
+    default_mode: meta.default_mode,
+    hero_item_id: meta.hero_item_id,
+    cover: meta.cover
+  };
+  const error = $('#clusterError');
+  if (error) error.hidden = true;
+  renderClusterDialog();
+  if (!dialog.open) dialog.showModal();
+}
+
+function resetClusterDialog() {
+  const d = state.clusterDialog;
+  if (!d.name) return;
+  state.clusterDialog = { ...d, mode: d.default_mode || 'product', hero_item_id: '', cover: '' };
+  renderClusterDialog();
+}
+
+async function findClusterCover(btn) {
+  const input = $('#clusterCoverUrl');
+  const value = input ? input.value.trim() : '';
+  if (!value) {
+    toast('Paste an image or product URL first.', 'warn');
+    return;
+  }
+  busy(btn, true, 'Finding');
+  try {
+    const data = await postJSON('/api/images/resolve', { url: value });
+    if (data.image) {
+      state.clusterDialog.cover = data.image;
+      if (input) input.value = data.image;
+      renderClusterDialog();
+      toast('Cover image cached locally.');
+    }
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+async function saveClusterForm(event) {
+  event.preventDefault();
+  const d = state.clusterDialog;
+  if (!d.name) return;
+  const error = $('#clusterError');
+  const btn = $('#clusterSaveBtn');
+  busy(btn, true, 'Saving');
+  try {
+    await putJSON(`/api/clusters/${encodeURIComponent(d.name)}`, {
+      mode: d.mode,
+      hero_item_id: d.hero_item_id,
+      cover: d.cover
+    });
+    const dialog = $('#clusterDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    toast('Cluster cover updated.');
+  } catch (err) {
+    if (error) { error.hidden = false; error.textContent = err.message; }
+    toast(err.message, 'err');
+  } finally {
+    busy(btn, false);
+  }
+}
+
+function jumpToWish(id) {
+  if (!id) return;
+  setTab('wishlist', { scroll: false });
+  window.setTimeout(() => {
+    const card = $$('[data-wish-id]').find((el) => el.dataset.wishId === id);
+    if (!card) return;
+    card.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' });
+    card.focus({ preventScroll: true });
+    card.classList.add('is-focus');
+    window.setTimeout(() => card.classList.remove('is-focus'), 1800);
+  }, 90);
+}
+
 function bindEvents() {
   const railNav = $('.rail-nav');
   if (railNav) {
@@ -1544,8 +3761,16 @@ function bindEvents() {
     });
   }
   window.addEventListener('hashchange', () => {
-    const tab = location.hash.slice(1);
-    if (sectionById(tab) && tab !== state.tab) setTab(tab, { scroll: false, updateHash: false });
+    const route = routeState();
+    if (!sectionById(route.tab)) return;
+    applyRoute(route);
+    if (route.tab !== state.tab) {
+      setTab(route.tab, { scroll: false, updateHash: false });
+    } else if (state.vault) {
+      renderAll();
+      if (route.tab === 'library') loadLibrary(true);
+      if (route.tab === 'vault') loadBookmarks(true);
+    }
   });
   document.addEventListener('click', (event) => {
     const go = event.target.closest('[data-goto]');
@@ -1575,6 +3800,7 @@ function bindEvents() {
       if (item && Number(item.dataset.index) !== state.paletteIndex) setPaletteIndex(Number(item.dataset.index));
     });
   }
+  let goPending = 0;
   window.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
@@ -1583,10 +3809,31 @@ function bindEvents() {
       else openPalette();
       return;
     }
-    if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !isTyping(event.target) && !document.querySelector('dialog[open]')) {
+    if (isTyping(event.target) || event.metaKey || event.ctrlKey || event.altKey || document.querySelector('dialog[open]')) return;
+    if (event.key === '/' || event.key === 's') {
       event.preventDefault();
       setTab('vault');
       window.setTimeout(() => { const el = $('#bmSearchInput'); if (el) el.focus(); }, 160);
+      return;
+    }
+    const now = Date.now();
+    if (event.key === 'g') {
+      goPending = now;
+      return;
+    }
+    if (goPending && now - goPending < 1000) {
+      const destinations = { d: 'deck', v: 'vault', l: 'library', w: 'wishlist', r: 'protocols', y: 'context', c: 'ingest', t: 'router' };
+      const destination = destinations[event.key.toLowerCase()];
+      goPending = 0;
+      if (destination) {
+        event.preventDefault();
+        setTab(destination);
+        return;
+      }
+    }
+    if (event.key === 'n' && state.tab === 'protocols') {
+      event.preventDefault();
+      openRoutineDialog(null);
     }
   });
   $$('dialog').forEach((dialog) => {
@@ -1620,20 +3867,37 @@ function bindEvents() {
   const clusterGrid = $('#clusterGrid');
   if (clusterGrid) {
     clusterGrid.addEventListener('click', (event) => {
+      const cover = event.target.closest('[data-cover]');
+      if (cover) { openClusterDialog(cover.dataset.cover); return; }
       const btn = event.target.closest('[data-cat]');
       if (!btn) return;
       state.category = state.category === btn.dataset.cat ? 'ALL' : btn.dataset.cat;
+      syncHash();
       renderCategories(state.vault);
+      renderWantedStrip(state.vault);
       loadBookmarks(true);
+      const strip = $('#wantedStrip');
       const results = $('.results-bar');
-      if (results && !reduceMotion.matches) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const target = strip && !strip.hidden ? strip : results;
+      if (target && !reduceMotion.matches) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  const wantedStrip = $('#wantedStrip');
+  if (wantedStrip) {
+    wantedStrip.addEventListener('click', (event) => {
+      const cover = event.target.closest('[data-cover]');
+      if (cover) { openClusterDialog(cover.dataset.cover); return; }
+      const jump = event.target.closest('[data-wish-jump]');
+      if (jump) jumpToWish(jump.dataset.wishJump);
     });
   }
   const allClustersBtn = $('#allClustersBtn');
   if (allClustersBtn) {
     allClustersBtn.addEventListener('click', () => {
       state.category = 'ALL';
+      syncHash();
       renderCategories(state.vault);
+      renderWantedStrip(state.vault);
       loadBookmarks(true);
     });
   }
@@ -1648,6 +3912,153 @@ function bindEvents() {
   }
   const syncBtn = $('#syncBtn');
   if (syncBtn) syncBtn.addEventListener('click', () => syncBookmarks(syncBtn));
+  const importBtn = $('#importBtn');
+  const importFile = $('#importFile');
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', async () => {
+      const file = importFile.files && importFile.files[0];
+      importFile.value = '';
+      if (file) await importVaultFile(file);
+    });
+  }
+
+  const librarySearch = $('#librarySearch');
+  if (librarySearch) {
+    librarySearch.addEventListener('input', () => {
+      window.clearTimeout(state.library.timer);
+      state.library.timer = window.setTimeout(() => loadLibrary(true), 360);
+    });
+    librarySearch.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { window.clearTimeout(state.library.timer); loadLibrary(true); }
+      if (event.key === 'Escape') {
+        if (librarySearch.value) { librarySearch.value = ''; loadLibrary(true); }
+        else librarySearch.blur();
+      }
+    });
+  }
+  const libraryStatusFilter = $('#libraryStatusFilter');
+  if (libraryStatusFilter) libraryStatusFilter.addEventListener('change', () => loadLibrary(true));
+  const libraryRefreshBtn = $('#libraryRefreshBtn');
+  if (libraryRefreshBtn) libraryRefreshBtn.addEventListener('click', () => loadLibrary(true));
+  const librarySections = $('#librarySections');
+  if (librarySections) {
+    librarySections.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-library-section]');
+      if (!btn) return;
+      state.library.section = btn.dataset.librarySection;
+      syncHash();
+      loadLibrary(true);
+    });
+  }
+  const libraryGrid = $('#libraryGrid');
+  if (libraryGrid) {
+    libraryGrid.addEventListener('click', (event) => {
+      const restore = event.target.closest('[data-library-restore]');
+      if (restore) { bulkLibrary('restore', [restore.dataset.libraryRestore]); return; }
+      const edit = event.target.closest('[data-library-edit]');
+      if (edit) openLibraryEdit(edit.dataset.libraryEdit);
+    });
+    libraryGrid.addEventListener('change', (event) => {
+      const pick = event.target.closest('[data-library-pick]');
+      if (!pick) return;
+      const ids = new Set(state.library.selected);
+      if (pick.checked) ids.add(pick.dataset.libraryPick);
+      else ids.delete(pick.dataset.libraryPick);
+      state.library.selected = [...ids];
+      const card = pick.closest('.library-card');
+      if (card) card.classList.toggle('is-selected', pick.checked);
+      updateLibraryBulk();
+    });
+  }
+  const librarySelectBtn = $('#librarySelectBtn');
+  if (librarySelectBtn) librarySelectBtn.addEventListener('click', () => {
+    state.library.selectMode = !state.library.selectMode;
+    if (!state.library.selectMode) state.library.selected = [];
+    renderLibrary();
+    const first = $('#libraryGrid input[data-library-pick]');
+    if (state.library.selectMode && first) first.focus();
+  });
+  const libraryBulkClear = $('#libraryBulkClear');
+  if (libraryBulkClear) libraryBulkClear.addEventListener('click', () => {
+    state.library.selected = [];
+    renderLibrary();
+  });
+  const libraryBulkArchive = $('#libraryBulkArchive');
+  if (libraryBulkArchive) libraryBulkArchive.addEventListener('click', () => bulkLibrary('archive', state.library.selected));
+  const libraryBulkRestore = $('#libraryBulkRestore');
+  if (libraryBulkRestore) libraryBulkRestore.addEventListener('click', () => bulkLibrary('restore', state.library.selected));
+  const libraryBulkMove = $('#libraryBulkMove');
+  if (libraryBulkMove) libraryBulkMove.addEventListener('click', () => {
+    const section = $('#libraryBulkSection') ? $('#libraryBulkSection').value : '';
+    if (!section) { toast('Pick a section first.', 'warn'); return; }
+    bulkLibrary('section', state.library.selected, { library_section: section });
+  });
+  const libraryDuplicatesBtn = $('#libraryDuplicatesBtn');
+  if (libraryDuplicatesBtn) libraryDuplicatesBtn.addEventListener('click', openLibraryDuplicates);
+  const duplicateClose = $('#duplicateClose');
+  const duplicateCancel = $('#duplicateCancel');
+  if (duplicateClose) duplicateClose.addEventListener('click', () => $('#duplicateDialog').close());
+  if (duplicateCancel) duplicateCancel.addEventListener('click', () => $('#duplicateDialog').close());
+  const duplicateClean = $('#duplicateClean');
+  if (duplicateClean) duplicateClean.addEventListener('click', () => archiveDuplicateExtras(duplicateClean));
+  const libraryMoreBtn = $('#libraryMoreBtn');
+  if (libraryMoreBtn) libraryMoreBtn.addEventListener('click', () => loadLibrary(false));
+  const libraryEditClose = $('#libraryEditClose');
+  const libraryEditCancel = $('#libraryEditCancel');
+  if (libraryEditClose) libraryEditClose.addEventListener('click', () => $('#libraryEditDialog').close());
+  if (libraryEditCancel) libraryEditCancel.addEventListener('click', () => $('#libraryEditDialog').close());
+  const libraryEditForm = $('#libraryEditForm');
+  if (libraryEditForm) libraryEditForm.addEventListener('submit', saveLibraryEdit);
+
+  const newRoutineBtn = $('#newRoutineBtn');
+  if (newRoutineBtn) newRoutineBtn.addEventListener('click', () => openRoutineDialog(null));
+  const routineToday = $('#routineToday');
+  if (routineToday) {
+    routineToday.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-routine-check]');
+      if (!btn) return;
+      toggleRoutineToday(btn.dataset.routineCheck, btn.dataset.routineDone === 'true', btn);
+    });
+  }
+  const protocolsGrid = $('#protocolsGrid');
+  if (protocolsGrid) {
+    protocolsGrid.addEventListener('click', (event) => {
+      const linkedProduct = event.target.closest('[data-proto-wish]');
+      if (linkedProduct) { jumpToWish(linkedProduct.dataset.protoWish); return; }
+      const edit = event.target.closest('[data-proto-edit]');
+      if (edit && state.vault) {
+        const protocol = (state.vault.protocols || []).find((item) => item.id === edit.dataset.protoEdit);
+        if (protocol) openRoutineDialog(protocol);
+        return;
+      }
+      const remove = event.target.closest('[data-proto-delete]');
+      if (remove) removeProtocol(remove.dataset.protoDelete);
+      const fresh = event.target.closest('[data-new-routine]');
+      if (fresh) openRoutineDialog(null);
+    });
+  }
+  const routineClose = $('#routineClose');
+  const routineCancel = $('#routineCancel');
+  if (routineClose) routineClose.addEventListener('click', () => $('#routineDialog').close());
+  if (routineCancel) routineCancel.addEventListener('click', () => $('#routineDialog').close());
+  const routineParseBtn = $('#routineParseBtn');
+  if (routineParseBtn) routineParseBtn.addEventListener('click', () => generateRoutine(routineParseBtn));
+  const routineForm = $('#routineForm');
+  if (routineForm) routineForm.addEventListener('submit', saveRoutineForm);
+  const routineProducts = $('#routineProducts');
+  if (routineProducts) {
+    routineProducts.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-routine-link]');
+      if (!btn) return;
+      const id = btn.dataset.routineLink;
+      const ids = new Set(state.routineLinkedIds || []);
+      if (ids.has(id)) ids.delete(id);
+      else ids.add(id);
+      state.routineLinkedIds = Array.from(ids);
+      renderRoutineProducts();
+    });
+  }
 
   const verdictFilters = $('#verdictFilters');
   if (verdictFilters) {
@@ -1655,18 +4066,111 @@ function bindEvents() {
       const btn = event.target.closest('[data-verdict]');
       if (!btn) return;
       state.verdict = btn.dataset.verdict;
+      syncHash();
+      renderWishlistView(state.vault);
+    });
+  }
+  const gateStatusbar = $('#gateStatusbar');
+  if (gateStatusbar) {
+    gateStatusbar.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-gate-filter]');
+      if (!btn) return;
+      state.gateFilter = btn.dataset.gateFilter;
+      syncHash();
       renderWishlistView(state.vault);
     });
   }
   const wishGrid = $('#wishlistGrid');
   if (wishGrid) {
     wishGrid.addEventListener('click', (event) => {
+      const gateAction = event.target.closest('[data-gate-action]');
+      if (gateAction) { openGateAction(gateAction.dataset.gateId, gateAction.dataset.gateAction); return; }
       const audit = event.target.closest('[data-audit]');
       if (audit) openAudit(audit.dataset.audit);
+      const edit = event.target.closest('[data-wish-edit]');
+      if (edit) { openWishEdit(edit.dataset.wishEdit); return; }
       const photo = event.target.closest('[data-wish-photo]');
       if (photo) openPhotoDialog(photo.dataset.wishPhoto);
+      const refresh = event.target.closest('[data-price-refresh]');
+      if (refresh) refreshWishPrice(refresh.dataset.priceRefresh, refresh);
     });
   }
+  const ledgerBtn = $('#ledgerBtn');
+  if (ledgerBtn) ledgerBtn.addEventListener('click', openLedger);
+  const ledgerClose = $('#ledgerClose');
+  if (ledgerClose) ledgerClose.addEventListener('click', () => $('#ledgerDialog').close());
+  const ledgerBudgetBtn = $('#ledgerBudgetBtn');
+  if (ledgerBudgetBtn) ledgerBudgetBtn.addEventListener('click', openBudgetDialog);
+  const ledgerList = $('#ledgerList');
+  if (ledgerList) {
+    ledgerList.addEventListener('click', (event) => {
+      const voidBtn = event.target.closest('[data-void-ledger]');
+      if (voidBtn) openVoidDialog(voidBtn.dataset.voidLedger);
+    });
+  }
+  const promoteClose = $('#promoteClose');
+  const promoteCancel = $('#promoteCancel');
+  if (promoteClose) promoteClose.addEventListener('click', closePromotionReview);
+  if (promoteCancel) promoteCancel.addEventListener('click', closePromotionReview);
+  const promoteForm = $('#promoteForm');
+  if (promoteForm) promoteForm.addEventListener('submit', savePromotion);
+  const quickAddForm = $('#quickAddForm');
+  if (quickAddForm) quickAddForm.addEventListener('submit', quickAddLink);
+  const quickAddPaste = $('#quickAddPaste');
+  if (quickAddPaste) quickAddPaste.addEventListener('click', pasteQuickAddLink);
+  $$('[data-capture-open]').forEach((btn) => btn.addEventListener('click', openCaptureDialog));
+  const captureDialog = $('#captureDialog');
+  const captureClose = $('#captureClose');
+  const captureDone = $('#captureDone');
+  if (captureClose) captureClose.addEventListener('click', () => captureDialog.close());
+  if (captureDone) captureDone.addEventListener('click', () => captureDialog.close());
+  const captureBookmarklet = $('#captureBookmarklet');
+  if (captureBookmarklet) {
+    captureBookmarklet.addEventListener('click', (event) => {
+      event.preventDefault();
+      toast('Drag this button to your bookmarks bar, or copy the code below.', 'warn');
+    });
+  }
+  const captureCopyBtn = $('#captureCopyBtn');
+  if (captureCopyBtn) captureCopyBtn.addEventListener('click', () => copyCaptureBookmarklet(captureCopyBtn));
+  const captureCode = $('#captureCode');
+  if (captureCode) captureCode.addEventListener('focus', () => captureCode.select());
+  const promoteDialog = $('#promoteDialog');
+  if (promoteDialog) {
+    promoteDialog.addEventListener('close', () => { state.promotion = null; });
+    promoteDialog.addEventListener('click', (event) => {
+      const dupe = event.target.closest('[data-dupe-jump]');
+      if (!dupe) return;
+      promoteDialog.close();
+      jumpToWish(dupe.dataset.dupeJump);
+    });
+  }
+  const wishEditClose = $('#wishEditClose');
+  const wishEditCancel = $('#wishEditCancel');
+  if (wishEditClose) wishEditClose.addEventListener('click', () => $('#wishEditDialog').close());
+  if (wishEditCancel) wishEditCancel.addEventListener('click', () => $('#wishEditDialog').close());
+  const wishEditForm = $('#wishEditForm');
+  if (wishEditForm) wishEditForm.addEventListener('submit', saveWishEdit);
+  const budgetClose = $('#budgetClose');
+  const budgetCancel = $('#budgetCancel');
+  if (budgetClose) budgetClose.addEventListener('click', () => $('#budgetDialog').close());
+  if (budgetCancel) budgetCancel.addEventListener('click', () => $('#budgetDialog').close());
+  const budgetForm = $('#budgetForm');
+  if (budgetForm) budgetForm.addEventListener('submit', saveBudget);
+  const voidClose = $('#voidClose');
+  const voidCancel = $('#voidCancel');
+  if (voidClose) voidClose.addEventListener('click', () => $('#voidDialog').close());
+  if (voidCancel) voidCancel.addEventListener('click', () => $('#voidDialog').close());
+  const voidForm = $('#voidForm');
+  if (voidForm) voidForm.addEventListener('submit', submitVoid);
+  const gateActionForm = $('#gateActionForm');
+  if (gateActionForm) gateActionForm.addEventListener('submit', submitGateAction);
+  const gateActionClose = $('#gateActionClose');
+  const gateActionCancel = $('#gateActionCancel');
+  if (gateActionClose) gateActionClose.addEventListener('click', () => $('#gateActionDialog').close());
+  if (gateActionCancel) gateActionCancel.addEventListener('click', () => $('#gateActionDialog').close());
+  const gateAmount = $('#gateAmount');
+  if (gateAmount) gateAmount.addEventListener('input', renderGateActionBudget);
 
   const main = $('#main');
   if (main) {
@@ -1752,6 +4256,44 @@ function bindEvents() {
   const photoForm = $('#photoForm');
   if (photoForm) photoForm.addEventListener('submit', savePhotoForm);
 
+  const clusterDialog = $('#clusterDialog');
+  const clusterClose = $('#clusterClose');
+  if (clusterClose) clusterClose.addEventListener('click', () => clusterDialog.close());
+  const clusterCancel = $('#clusterCancel');
+  if (clusterCancel) clusterCancel.addEventListener('click', () => clusterDialog.close());
+  const clusterForm = $('#clusterForm');
+  if (clusterForm) clusterForm.addEventListener('submit', saveClusterForm);
+  const clusterReset = $('#clusterReset');
+  if (clusterReset) clusterReset.addEventListener('click', resetClusterDialog);
+  const clusterCoverFind = $('#clusterCoverFind');
+  if (clusterCoverFind) clusterCoverFind.addEventListener('click', () => findClusterCover(clusterCoverFind));
+  const clusterModeToggle = $('#clusterModeToggle');
+  if (clusterModeToggle) {
+    clusterModeToggle.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-cluster-mode]');
+      if (!btn) return;
+      state.clusterDialog.mode = btn.dataset.clusterMode;
+      renderClusterDialog();
+    });
+  }
+  const clusterHeroPicker = $('#clusterHeroPicker');
+  if (clusterHeroPicker) {
+    clusterHeroPicker.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-hero]');
+      if (!btn) return;
+      state.clusterDialog.hero_item_id = btn.dataset.hero || '';
+      state.clusterDialog.cover = '';
+      renderClusterDialog();
+    });
+  }
+  const clusterCoverUrl = $('#clusterCoverUrl');
+  if (clusterCoverUrl) {
+    clusterCoverUrl.addEventListener('input', () => {
+      state.clusterDialog.cover = clusterCoverUrl.value.trim();
+      renderClusterDialog();
+    });
+  }
+
   const form = $('#ingestForm');
   if (form) form.addEventListener('submit', runIngest);
   $$('.example-chip').forEach((btn) => {
@@ -1788,15 +4330,31 @@ function bindEvents() {
 }
 
 async function init() {
+  const params = new URLSearchParams(location.search);
+  const captureParam = params.get('capture');
+  const captureUrl = normalizeCaptureUrl(captureParam || '');
+  const captureSnapshot = snapshotFromSearch(location.search);
+  if (params.get('share') === 'empty') toast('That share did not include a product link. Paste the URL instead.', 'warn');
   bindEvents();
+  window.addEventListener('resize', syncRailOverflow);
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname))) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
   setupClock();
   setupCursor();
   await loadSections();
   setupReveal();
-  const initial = location.hash.slice(1);
-  setTab(sectionById(initial) ? initial : 'deck', { scroll: false, updateHash: false });
+  const route = routeState();
+  applyRoute(route);
+  const initialTab = captureUrl ? 'wishlist' : route.tab;
+  setTab(initialTab, { scroll: false, updateHash: false });
+  if (captureParam) {
+    try { history.replaceState(null, '', captureUrl ? `${location.pathname}#wishlist` : location.pathname + location.hash); } catch (_) {}
+  }
   await refreshVault(true);
   await loadBookmarks(true);
+  if (captureUrl) await reviewProductLink(captureUrl, $('#quickAddBtn'), captureSnapshot);
+  else if (captureParam) toast('That capture link did not include a usable http(s) product URL.', 'warn');
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

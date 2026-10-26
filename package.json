@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "sync-bookmarks": "node scripts/sync-bookmarks.js",
+    "audit-library": "node scripts/audit-library.js",
+    "generate-cluster-cards": "node scripts/generate-cluster-cards.js",
     "worker": "node jobs/nebius-serverless-worker.js",
+    "archil-check": "node scripts/archil-persist-check.js",
     "test": "node --test tests/*.test.js"
   },
   "engines": {
@@ -15,6 +18,10 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",
+    "disk": "1.8.0",
     "dotenv": "^18.0.8"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
   }
 }

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Career, Jobs &amp; Interview Prep reference card">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b151f"/>
+      <stop offset="0.55" stop-color="#071019"/>
+      <stop offset="1" stop-color="#04080d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffc35c" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#ffc35c" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse">
+      <path d="M38 0H0V38" fill="none" stroke="#ffffff" stroke-opacity="0.035"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect width="800" height="600" fill="url(#grid)"/>
+  <circle cx="632" cy="174" r="270" fill="url(#glow)" opacity="0.7"/>
+  <circle cx="632" cy="174" r="126" fill="none" stroke="#ffc35c" stroke-opacity="0.12" stroke-width="1"/>
+  <circle cx="632" cy="174" r="184" fill="none" stroke="#ffc35c" stroke-opacity="0.06" stroke-width="1"/>
+  <path d="M48 74h68" stroke="#ffc35c" stroke-width="2"/>
+  <text x="48" y="48" fill="#82919f" font-family="Consolas, 'Courier New', monospace" font-size="11" letter-spacing="3">STASHOV / PRIVATE INDEX</text>
+  <text x="752" y="48" text-anchor="end" fill="#ffc35c" font-family="Consolas, 'Courier New', monospace" font-size="11" letter-spacing="2.5">CLUSTER 04</text>
+  <text x="42" y="252" fill="#ffc35c" fill-opacity="0.13" font-family="'Segoe UI', Arial, sans-serif" font-size="176" font-weight="700" letter-spacing="-12">04</text>
+  <g transform="translate(500 72)">
+        <rect x="26" y="184" width="42" height="32" rx="6" fill="#ffc35c" fill-opacity="0.14" stroke="#ffc35c" stroke-width="2"/>
+        <rect x="82" y="148" width="42" height="68" rx="6" fill="#ffc35c" fill-opacity="0.18" stroke="#ffc35c" stroke-width="2"/>
+        <rect x="138" y="108" width="42" height="108" rx="6" fill="#ffc35c" fill-opacity="0.22" stroke="#ffc35c" stroke-width="2"/>
+        <rect x="194" y="58" width="30" height="158" rx="6" fill="#ffc35c" fill-opacity="0.3" stroke="#ffc35c" stroke-width="2"/>
+        <path d="M42 166 91 129l56-38 74-48" fill="none" stroke="#ffc35c" stroke-width="4" stroke-dasharray="7 7" stroke-linecap="round"/>
+        <path d="m206 32 24 4-14 20" fill="none" stroke="#ffc35c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <text x="48" y="354" fill="#ffc35c" font-family="Consolas, 'Courier New', monospace" font-size="10" letter-spacing="3">REFERENCE CARD</text>
+  <text x="48" y="404" fill="#f2f7f8" font-family="'Segoe UI', Arial, sans-serif" font-size="44" font-weight="600" letter-spacing="-1.4"><tspan x="48" dy="0">Career, Jobs &amp; Interview</tspan><tspan x="48" dy="52">Prep</tspan></text>
+  <path d="M48 552h704" stroke="#ffffff" stroke-opacity="0.08"/>
+  <text x="48" y="576" fill="#6f7f8d" font-family="Consolas, 'Courier New', monospace" font-size="9" letter-spacing="2.2">14 CLUSTERS / ONE PRIVATE BRAIN</text>
+  <text x="752" y="576" text-anchor="end" fill="#ffc35c" fill-opacity="0.72" font-family="Consolas, 'Courier New', monospace" font-size="9" letter-spacing="2.2">STASHOV.COM</text>
+</svg>

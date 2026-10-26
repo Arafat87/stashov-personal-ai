@@ -9,12 +9,15 @@
 <link rel="preload" href="/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/fonts/instrument-serif-italic-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<link rel="manifest" href="/manifest.webmanifest" />
 <link rel="stylesheet" href="/styles.css" />
 <link rel="stylesheet" href="/views.css" />
 <link rel="stylesheet" href="/overlays.css" />
-<script>document.documentElement.classList.add('js');</script>
+<script src="/boot.js"></script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
 <symbol id="i-deck" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></symbol>
 <symbol id="i-vault" viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H20v14H6.5A2.5 2.5 0 0 1 4 16.5z"/><path d="M4 7.5V6a2 2 0 0 1 2-2h11"/><circle cx="15" cy="12" r="2.4"/><path d="M15 9.6V8.2M15 15.8v-1.4M12.6 12H11M19 12h-1.6"/></symbol>
@@ -41,6 +44,9 @@
 <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></symbol>
 <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/></symbol>
 <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.5-6.4 9.2-6.4S21.2 12 21.2 12s-3.5 6.4-9.2 6.4S2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16.5H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5v14M8 7h8M8 11h8M8 15h5"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></symbol>
+<symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8v1.7M3.5 12.5h17M10 12.5v2h4v-2"/></symbol>
 </svg>
 <div class="bg" aria-hidden="true">
 <div class="bg-aurora a1"></div><div class="bg-aurora a2"></div><div class="bg-aurora a3"></div>
@@ -49,9 +55,10 @@
 <div class="cursor-glow" aria-hidden="true"></div>
 <aside class="rail">
 <a class="brand-mark" href="#deck" aria-label="Stashov home"><span>S</span></a>
-<nav class="rail-nav" role="tablist" aria-label="Vault sections">
+<nav class="rail-nav" role="tablist" aria-label="Vault sections" aria-orientation="vertical">
 <button class="rail-btn" id="tab-deck" data-tab="deck" role="tab" aria-selected="true" aria-controls="panel-deck"><svg class="icon"><use href="#i-deck"/></svg><span>Deck</span></button>
 <button class="rail-btn" id="tab-vault" data-tab="vault" role="tab" aria-selected="false" aria-controls="panel-vault"><svg class="icon"><use href="#i-vault"/></svg><span>Vault</span></button>
+<button class="rail-btn" id="tab-library" data-tab="library" role="tab" aria-selected="false" aria-controls="panel-library"><svg class="icon"><use href="#i-book"/></svg><span>Library</span></button>
 <button class="rail-btn" id="tab-wishlist" data-tab="wishlist" role="tab" aria-selected="false" aria-controls="panel-wishlist"><svg class="icon"><use href="#i-gate"/></svg><span>Gate</span></button>
 <button class="rail-btn" id="tab-protocols" data-tab="protocols" role="tab" aria-selected="false" aria-controls="panel-protocols"><svg class="icon"><use href="#i-pulse"/></svg><span>Rules</span></button>
 <button class="rail-btn" id="tab-context" data-tab="context" role="tab" aria-selected="false" aria-controls="panel-context"><svg class="icon"><use href="#i-fingerprint"/></svg><span>You</span></button>
@@ -73,7 +80,7 @@
         <button class="palette-btn" id="paletteBtn" aria-label="Open command palette" aria-haspopup="dialog" aria-controls="paletteDialog"><svg class="icon"><use href="#i-command"/></svg><span>Command</span><kbd id="paletteKbd">Ctrl K</kbd></button>
 </div>
 </header>
-<main id="main">
+<main id="main" tabindex="-1">
 <section class="panel is-active" id="panel-deck" role="tabpanel" aria-labelledby="tab-deck" tabindex="0">
   <div class="hero">
     <div class="hero-copy">
@@ -155,7 +162,7 @@
   <div class="section-head reveal">
     <div>
       <p class="eyebrow">01 / SIGNAL INDEX</p>
-      <h2><span id="vaultHeadCount">1,397</span> saved links.<br><em>Zero lost.</em></h2>
+      <h2><span id="vaultHeadCount">1,337</span> saved links.<br><em>Zero lost.</em></h2>
       <p class="lede">Chrome, Brave and Edge bookmarks, deduplicated, embedded, and sorted into fourteen clusters. Search by memory instead of folder archaeology.</p>
     </div>
     <div class="head-actions">
@@ -192,11 +199,81 @@
     <div id="clusterGrid" class="cluster-grid" role="group" aria-label="Filter signals by cluster"></div>
   </section>
 
+  <section class="wanted-strip reveal" id="wantedStrip" aria-labelledby="wantedTitle" hidden>
+    <header class="wanted-head">
+      <div>
+        <p class="micro">WANTED HERE</p>
+        <h4 id="wantedTitle">Cluster wishes</h4>
+        <p class="wanted-meta" id="wantedMeta">—</p>
+      </div>
+      <div class="wanted-tools">
+        <button type="button" class="btn ghost sm" id="wantedCoverBtn" data-cover=""><svg class="icon"><use href="#i-image"/></svg> Change cover</button>
+      </div>
+    </header>
+    <div class="wanted-rail" id="wantedRail"></div>
+  </section>
+
   <div class="vault-main">
     <div class="results-bar"><p id="bmCount" aria-live="polite">Loading signals.</p><span class="mono" id="activeFilter"></span></div>
     <div id="bmGrid" class="signal-grid" aria-busy="true"></div>
     <div class="load-more-wrap"><button class="btn ghost" id="loadMoreBtn" hidden>Load more signals <svg class="icon"><use href="#i-arrow"/></svg></button></div>
   </div>
+</section>
+
+<section class="panel" id="panel-library" role="tabpanel" aria-labelledby="tab-library" tabindex="0" hidden>
+  <div class="section-head reveal">
+    <div>
+      <p class="eyebrow">02 / REFERENCE LIBRARY</p>
+      <h2>Not everything<br><em>is a purchase.</em></h2>
+      <p class="lede">The links that are not price-tracked: courses, documentation, business research, utilities and guides. Every site is checked, described, and filed by what it is useful for.</p>
+    </div>
+    <div class="head-actions">
+      <span class="status-chip"><i></i><span id="libraryCount">—</span> sites filed</span>
+      <span class="micro" id="libraryAuditStamp">AWAITING AUDIT</span>
+    </div>
+  </div>
+
+  <div class="vault-toolbar reveal">
+    <div class="search-field">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="text" id="librarySearch" autocomplete="off" placeholder="Search the library — 'figma', 'course', 'invoice'…" aria-label="Search reference library" />
+      <kbd>/</kbd>
+    </div>
+    <div class="select-wrap">
+      <select id="libraryStatusFilter" aria-label="Filter reference links by status">
+        <option value="ALL">All statuses</option>
+        <option value="ok">Verified live</option>
+        <option value="blocked">Bot-blocked</option>
+        <option value="error">Needs review</option>
+        <option value="unchecked">Not checked</option>
+        <option value="archived">Archived</option>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </div>
+    <button class="btn ghost" id="librarySelectBtn" aria-pressed="false"><svg class="icon"><use href="#i-check"/></svg> Select</button>
+    <button class="btn ghost" id="libraryDuplicatesBtn"><svg class="icon"><use href="#i-pulse"/></svg> Duplicates <b class="library-dupe-badge" id="libraryDupeCount" hidden>0</b></button>
+    <button class="btn ghost" id="libraryRefreshBtn"><svg class="icon"><use href="#i-refresh"/></svg> Refresh list</button>
+  </div>
+
+  <div class="library-bulk reveal" id="libraryBulk" role="region" aria-label="Bulk library actions" hidden>
+    <p><b id="libraryBulkCount">0</b> selected</p>
+    <div class="library-bulk-actions">
+      <div class="select-wrap">
+        <select id="libraryBulkSection" aria-label="Move selected links to a section"></select>
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+      </div>
+      <button class="btn ghost sm" type="button" id="libraryBulkMove"><svg class="icon"><use href="#i-arrow"/></svg> Move</button>
+      <button class="btn ghost sm" type="button" id="libraryBulkArchive"><svg class="icon"><use href="#i-trash"/></svg> Archive</button>
+      <button class="btn ghost sm" type="button" id="libraryBulkRestore" hidden><svg class="icon"><use href="#i-refresh"/></svg> Restore</button>
+      <button class="btn ghost sm" type="button" id="libraryBulkClear">Clear selection</button>
+    </div>
+  </div>
+
+  <div class="library-section-nav reveal" id="librarySections" role="group" aria-label="Reference library sections"></div>
+
+  <div class="results-bar"><p id="libraryResultCount" aria-live="polite">Loading reference links.</p><span class="mono" id="libraryActiveSection">ALL SECTIONS</span></div>
+  <div id="libraryGrid" class="library-grid" aria-busy="true"></div>
+  <div class="load-more-wrap"><button class="btn ghost" id="libraryMoreBtn" hidden>Load more sites <svg class="icon"><use href="#i-arrow"/></svg></button></div>
 </section>
 
 <section class="panel" id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" tabindex="0" hidden>
@@ -206,15 +283,16 @@
       <h2>Nothing gets bought<br><em>on impulse.</em></h2>
       <p class="lede">Each wish is checked against what you already own, your routine, the price floor, and a fourteen-day cooling lock. The AI argues against the purchase by default.</p>
     </div>
-    <div class="head-actions"><button class="btn quiet" id="gateOracleBtn" data-goto="router"><svg class="icon"><use href="#i-spark"/></svg> Ask the oracle</button></div>
+    <div class="head-actions"><button class="btn quiet" type="button" data-capture-open><svg class="icon"><use href="#i-plus"/></svg> Capture anywhere</button><button class="btn quiet" id="gateOracleBtn" data-goto="router"><svg class="icon"><use href="#i-spark"/></svg> Ask the oracle</button></div>
   </div>
 
   <div class="gate-strip reveal">
     <div class="gate-budget">
-      <span class="micro">October fun-money remaining</span>
+      <span class="micro"><span id="wlBudgetMonth">OCTOBER</span> fun-money remaining</span>
       <strong id="wlRemaining">$—</strong>
       <div class="gate-rail"><i id="wlRailFill"></i></div>
       <small id="wlSpentNote">— spent of — cap</small>
+      <button class="btn quiet sm gate-ledger-btn" type="button" id="ledgerBtn"><svg class="icon"><use href="#i-coin"/></svg> Spend ledger <b id="ledgerCount">0</b></button>
     </div>
     <div class="gate-rules">
       <span class="rule-chip"><svg class="icon"><use href="#i-lock"/></svg>14-day cooldown</span>
@@ -224,6 +302,20 @@
     </div>
   </div>
 
+  <form class="gate-quick-add reveal" id="quickAddForm" novalidate>
+    <span class="quick-add-icon" aria-hidden="true"><svg class="icon"><use href="#i-plus"/></svg></span>
+    <div class="quick-add-field">
+      <label for="quickAddUrl">Paste a product link</label>
+      <div class="quick-add-input">
+        <input type="url" id="quickAddUrl" autocomplete="off" spellcheck="false" placeholder="https://store.example.com/product" />
+        <button type="button" class="quick-add-paste" id="quickAddPaste" title="Read the link from your clipboard">Paste</button>
+      </div>
+    </div>
+    <button class="btn sm" type="submit" id="quickAddBtn"><svg class="icon"><use href="#i-spark"/></svg> Read &amp; review</button>
+    <p class="quick-add-note">Skips the bookmark hunt. Stashov captures the page, you confirm the price, then the 14-day clock starts. <button type="button" class="quick-add-link" data-capture-open>Add the one-click bookmarklet</button></p>
+  </form>
+
+  <div class="gate-statusbar reveal" id="gateStatusbar" role="group" aria-label="Filter wishes by gate status"></div>
   <div class="filter-row reveal" id="verdictFilters" role="group" aria-label="Filter wishlist by verdict"></div>
   <div id="wishlistGrid" class="wish-grid"></div>
 </section>
@@ -231,12 +323,13 @@
 <section class="panel" id="panel-protocols" role="tabpanel" aria-labelledby="tab-protocols" tabindex="0" hidden>
   <div class="section-head reveal">
     <div>
-      <p class="eyebrow">03 / LIVING PLAYBOOKS</p>
+      <p class="eyebrow">04 / LIVING PLAYBOOKS</p>
       <h2>Static hacks become<br><em>living rules.</em></h2>
-      <p class="lede">Your saved threads are compiled into active protocols. When a new purchase, supplement or habit collides with one, the vault blocks it before checkout.</p>
+      <p class="lede">Paste a routine from TikTok, YouTube or a product list. Stashov splits it into steps, checks it against your constraints, and saves it as an editable protocol.</p>
     </div>
-    <div class="head-actions"><span class="status-chip"><i></i><span id="protocolCount">—</span> protocols armed</span></div>
+    <div class="head-actions"><span class="status-chip"><i></i><span id="protocolCount">—</span> protocols armed</span><button class="btn" id="newRoutineBtn"><svg class="icon"><use href="#i-plus"/></svg> New routine</button></div>
   </div>
+  <div id="routineToday" class="routine-today reveal"></div>
   <div id="protocolsGrid" class="protocol-grid"></div>
 </section>
 
@@ -268,6 +361,18 @@
       <header class="panel-head"><span class="micro">OWNED INVENTORY</span><span class="badge-soft">6 ITEMS TRACKED</span></header>
       <h3>Already in rotation.</h3>
       <div class="inventory-list" id="inventoryList"></div>
+    </article>
+
+    <article class="data-card glass reveal" aria-labelledby="dataTitle">
+      <header class="panel-head"><span class="micro">DATA &amp; BACKUPS</span><span class="badge-soft">LOCAL</span></header>
+      <h3 id="dataTitle">Take it with you.</h3>
+      <p>Export a complete copy of the vault, sections and cluster covers. Restoring writes a timestamped snapshot first, so a bad import is recoverable.</p>
+      <div class="data-actions">
+        <a class="btn ghost sm" href="/api/export" download><svg class="icon" aria-hidden="true"><use href="#i-down"/></svg> Export vault</a>
+        <button class="btn ghost sm" type="button" id="importBtn"><svg class="icon" aria-hidden="true"><use href="#i-up"/></svg> Restore backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" aria-label="Choose a Stashov vault backup to restore" hidden />
+      </div>
+      <p class="data-status" id="dataStatus" role="status" aria-live="polite">Snapshots are kept in <code>data/backups</code>.</p>
     </article>
 
     <article class="scent-card glass reveal">
@@ -370,7 +475,7 @@
       </div>
       <div class="console-shell">
         <div class="console-bar"><span><i></i><i></i><i></i></span><span>ultra / 1m-context</span><span id="auditStatus">IDLE</span></div>
-        <pre class="console" id="auditOutput">The oracle is idle. Run a synthesis to audit 1,397 bookmarks, your wardrobe, budget and routines in a single pass.</pre>
+        <pre class="console" id="auditOutput">The oracle is idle. Run a synthesis to audit 1,337 bookmarks, your wardrobe, budget and routines in a single pass.</pre>
       </div>
     </article>
   </div>
@@ -422,7 +527,7 @@
     <h2 class="sr-only" id="paletteTitle">Command palette</h2>
     <div class="palette-input">
       <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-      <input type="text" id="paletteInput" role="combobox" aria-expanded="false" aria-controls="paletteList" aria-autocomplete="list" placeholder="Jump to a room or run a command…" autocomplete="off" />
+      <input type="text" id="paletteInput" role="combobox" aria-expanded="false" aria-controls="paletteList" aria-autocomplete="list" aria-label="Search rooms and commands" placeholder="Jump to a room or run a command…" autocomplete="off" />
       <kbd>Esc</kbd>
     </div>
     <div class="palette-list" id="paletteList" role="listbox" aria-label="Commands"></div>
@@ -465,6 +570,9 @@
             <option value="i-lock">Lock</option>
             <option value="i-clock">Clock</option>
             <option value="i-alert">Alert</option>
+            <option value="i-book">Book</option>
+            <option value="i-code">Code</option>
+            <option value="i-briefcase">Briefcase</option>
           </select></div>
           <div class="field"><label for="sectionColorText">Accent colour</label><div class="color-field"><input type="color" id="sectionColor" aria-label="Pick accent colour" /><input type="text" id="sectionColorText" maxlength="7" autocomplete="off" aria-label="Accent colour hex value" placeholder="#c6ff4a" /></div></div>
         </div>
@@ -506,6 +614,135 @@
   </div>
 </dialog>
 
+<dialog id="clusterDialog" class="cluster-dialog" aria-labelledby="clusterDialogTitle">
+  <div class="cluster-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">CLUSTER COVER</p>
+        <h2 id="clusterDialogTitle">Cluster identity</h2>
+        <p class="settings-sub" id="clusterDialogSub">Choose the image that represents this cluster.</p>
+      </div>
+      <button class="icon-btn" type="button" id="clusterClose" aria-label="Close cluster cover editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="clusterForm" class="cluster-form" novalidate>
+      <div class="cluster-preview" id="clusterPreview"></div>
+      <div class="field">
+        <label>Media mode</label>
+        <div class="mode-toggle" id="clusterModeToggle" role="group" aria-label="Cluster media mode">
+          <button type="button" data-cluster-mode="product" aria-pressed="false"><svg class="icon"><use href="#i-image"/></svg> Product photos</button>
+          <button type="button" data-cluster-mode="reference" aria-pressed="false"><svg class="icon"><use href="#i-command"/></svg> Reference card</button>
+        </div>
+        <p class="field-note" id="clusterModeNote">Every cluster has a generated reference card. Product clusters can feature the exact wishlist photo instead.</p>
+      </div>
+      <div class="field" id="clusterHeroField">
+        <label>Hero wishlist item</label>
+        <div class="hero-picker" id="clusterHeroPicker"></div>
+        <p class="field-note">The hero photo becomes the cluster cover. Auto picks the strongest verdict in the cluster.</p>
+      </div>
+      <div class="field" id="clusterCoverField">
+        <label for="clusterCoverUrl">Custom cover image (optional)</label>
+        <div class="image-picker"><input type="text" id="clusterCoverUrl" autocomplete="off" placeholder="Paste an image or product URL" /><button type="button" class="btn ghost sm" id="clusterCoverFind"><svg class="icon"><use href="#i-image"/></svg> Find</button></div>
+        <p class="field-note">Overrides the hero photo. Leave blank to use the pinned wish.</p>
+      </div>
+      <p class="form-error" id="clusterError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="clusterReset">Reset</button>
+        <button class="btn ghost sm" type="button" id="clusterCancel">Cancel</button>
+        <button class="btn" type="submit" id="clusterSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save cover</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="duplicateDialog" class="library-dialog" aria-labelledby="duplicateTitle">
+  <div class="library-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">LIBRARY HYGIENE</p>
+        <h2 id="duplicateTitle">Duplicate links</h2>
+        <p class="settings-sub" id="duplicateSummary">Checking for links that point at the same page…</p>
+      </div>
+      <button class="icon-btn" type="button" id="duplicateClose" aria-label="Close duplicate review"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="duplicate-body" id="duplicateBody"></div>
+    <footer class="duplicate-foot">
+      <p class="field-note">Keep one copy per page. Archived links stay recoverable from the Archived filter.</p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="duplicateCancel">Cancel</button>
+        <button class="btn sm" type="button" id="duplicateClean" disabled><svg class="icon"><use href="#i-check"/></svg> Archive extra copies</button>
+      </div>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="libraryEditDialog" class="library-dialog" aria-labelledby="libraryEditTitle">
+  <div class="library-shell">
+    <header class="settings-head">
+      <div><p class="eyebrow">REFERENCE NOTE</p><h2 id="libraryEditTitle">Edit library entry</h2></div>
+      <button class="icon-btn" type="button" id="libraryEditClose" aria-label="Close library editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="libraryEditForm" class="library-form" novalidate>
+      <input type="hidden" id="libraryEditId" />
+      <div class="library-edit-meta" id="libraryEditMeta"></div>
+      <div class="field"><label for="libraryEditSection">Section</label><select id="libraryEditSection"></select></div>
+      <div class="field"><label for="libraryEditDescription">What it is</label><textarea id="libraryEditDescription" rows="4" maxlength="360" placeholder="A short description of the site and what it covers."></textarea></div>
+      <div class="field"><label for="libraryEditUse">What to use it for</label><input type="text" id="libraryEditUse" maxlength="220" placeholder="e.g. practice coding interviews, compare fabric weights, find a font." /></div>
+      <p class="form-error" id="libraryEditError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <a class="btn ghost sm" id="libraryEditOpen" href="#" target="_blank" rel="noopener noreferrer"><svg class="icon"><use href="#i-external"/></svg> Open site</a>
+        <button class="btn ghost sm" type="button" id="libraryEditCancel">Cancel</button>
+        <button class="btn" type="submit" id="libraryEditSave"><svg class="icon"><use href="#i-check"/></svg> Save note</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="routineDialog" class="routine-dialog" aria-labelledby="routineDialogTitle">
+  <div class="routine-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">ROUTINE BUILDER</p>
+        <h2 id="routineDialogTitle">Build a routine</h2>
+        <p class="settings-sub">Paste a TikTok/YouTube routine or a product list. Generate the structure, edit it, then save it as a living rule.</p>
+      </div>
+      <button class="icon-btn" type="button" id="routineClose" aria-label="Close routine builder"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="routineForm" class="routine-form" novalidate>
+      <input type="hidden" id="routineId" />
+      <div class="field">
+        <label for="routinePaste">Paste the routine</label>
+        <textarea id="routinePaste" rows="6" maxlength="12000" placeholder="Morning&#10;1. Gentle cleanser&#10;2. Azelaic acid 10%&#10;3. SPF 50&#10;&#10;Night&#10;1. Double cleanse&#10;2. Adapalene 0.1%&#10;3. Ceramide moisturizer"></textarea>
+        <p class="field-note">One step per line works best. AM/PM headers, numbered lists, and semicolon-separated steps are detected automatically.</p>
+      </div>
+      <div class="routine-actions">
+        <button class="btn ghost sm" type="button" id="routineParseBtn"><svg class="icon"><use href="#i-spark"/></svg> Generate structure</button>
+        <span class="micro" id="routineParseNote">Nothing parsed yet.</span>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="routineTitle">Title</label><input type="text" id="routineTitle" maxlength="120" autocomplete="off" placeholder="e.g. Barrier repair AM/PM" /></div>
+        <div class="field"><label for="routineCategory">Category</label><input type="text" id="routineCategory" maxlength="100" autocomplete="off" placeholder="Skincare, Health &amp; Protocols" /></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="routineSchedule">Schedule</label><input type="text" id="routineSchedule" maxlength="100" autocomplete="off" placeholder="Daily — AM &amp; PM" /></div>
+        <div class="field"><label for="routineBadge">Credibility badge</label><input type="text" id="routineBadge" maxlength="100" autocomplete="off" placeholder="User-pasted — verify before use" /></div>
+      </div>
+      <div class="field"><label for="routineSteps">Steps (one per line)</label><textarea id="routineSteps" rows="8" placeholder="AM — Gentle cleanser&#10;AM — Azelaic acid 10%&#10;AM — SPF 50&#10;PM — Double cleanse&#10;PM — Adapalene 0.1%&#10;PM — Ceramide moisturizer"></textarea></div>
+      <div class="field">
+        <div class="routine-products-head"><label>Products used</label><span id="routineProductsCount">0 linked</span></div>
+        <div class="routine-products" id="routineProducts" role="group" aria-label="Link wishlist products to this routine"></div>
+        <p class="field-note">Pick the exact products this rule uses. Their photos appear on the saved protocol; products named in the paste are linked automatically.</p>
+      </div>
+      <div class="field"><label for="routineConflict">Conflict guardrail</label><textarea id="routineConflict" rows="3" maxlength="500" placeholder="What should the gate check before this routine is used?" ></textarea></div>
+      <div class="field"><label for="routineSource">Source / where you found it</label><input type="text" id="routineSource" maxlength="160" autocomplete="off" placeholder="TikTok, YouTube, dermatologist, product label…" /></div>
+      <p class="form-error" id="routineError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="routineCancel">Cancel</button>
+        <button class="btn" type="submit" id="routineSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save routine</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 <dialog id="photoDialog" class="photo-dialog" aria-labelledby="photoTitle">
   <div class="photo-shell">
     <header class="settings-head">
@@ -518,6 +755,204 @@
       <p class="photo-note">Stashov fetches the best OpenGraph image, downloads it, and serves it locally. A direct image URL overrides that.</p>
       <p class="form-error" id="photoError" role="alert" hidden></p>
       <div class="editor-actions"><button class="btn ghost sm" type="button" id="photoCancel">Cancel</button><button class="btn" type="submit" id="photoSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save photo</button></div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="gateActionDialog" class="gate-dialog" aria-labelledby="gateActionTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow" id="gateActionKicker">IMPULSE GATE</p>
+        <h2 id="gateActionTitle">Record decision</h2>
+        <p class="settings-sub" id="gateActionCopy">—</p>
+      </div>
+      <button class="icon-btn" type="button" id="gateActionClose" aria-label="Close gate action"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="gateActionForm" class="gate-form" novalidate>
+      <input type="hidden" id="gateActionId" />
+      <input type="hidden" id="gateActionType" />
+      <div class="field" id="gateAmountField"><label for="gateAmount">Purchase price (USD)</label><input type="number" id="gateAmount" min="0" step="0.01" inputmode="decimal" /></div>
+      <div class="field" id="gateSourceField"><label for="gateSource">Source</label><input type="text" id="gateSource" maxlength="180" autocomplete="off" /></div>
+      <div class="field" id="gateDaysField"><label for="gateDays">Snooze for</label><select id="gateDays"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></div>
+      <div class="field" id="gateNoteField"><label for="gateNote" id="gateNoteLabel">Note (optional)</label><textarea id="gateNote" rows="3" maxlength="500" placeholder="Why this decision?"></textarea></div>
+      <div class="gate-budget-preview" id="gateBudgetPreview"></div>
+      <p class="form-error" id="gateActionError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="gateActionCancel">Cancel</button>
+        <button class="btn" type="submit" id="gateActionSubmit"><svg class="icon"><use href="#i-check"/></svg> Save decision</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="ledgerDialog" class="ledger-dialog" aria-labelledby="ledgerTitle">
+  <div class="ledger-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">SPEND LEDGER</p>
+        <h2 id="ledgerTitle">Every decision,<br><em>on the record.</em></h2>
+        <p class="settings-sub" id="ledgerSub">—</p>
+      </div>
+      <div class="ledger-tools">
+        <button class="btn ghost sm" type="button" id="ledgerBudgetBtn"><svg class="icon"><use href="#i-coin"/></svg> Edit budget</button>
+        <button class="icon-btn" type="button" id="ledgerClose" aria-label="Close spend ledger"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+    <div class="ledger-body">
+      <div class="ledger-summary" id="ledgerSummary"></div>
+      <div class="ledger-list" id="ledgerList"></div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="captureDialog" class="gate-dialog capture-dialog" aria-labelledby="captureTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">CAPTURE FROM ANY PAGE</p>
+        <h2 id="captureTitle">One click.<br><em>No copy-paste.</em></h2>
+        <p class="settings-sub">Drag the button below to your bookmarks bar. On any product page, click it and Stashov reads the page directly in your browser before opening the pre-gate review.</p>
+      </div>
+      <button class="icon-btn" type="button" id="captureClose" aria-label="Close capture setup"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="capture-body">
+      <div class="capture-hero">
+        <a class="capture-bookmarklet" id="captureBookmarklet" href="#" draggable="true" title="Drag this link to your bookmarks bar">
+          <span class="capture-mark" aria-hidden="true">S</span>
+          <span class="capture-bookmarklet-copy"><b>Add to Stashov</b><small>Drag me to the bookmarks bar</small></span>
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+        </a>
+        <p class="capture-hero-note">Works in Chrome, Edge, Brave, Firefox and Safari. The app must be running at <code id="captureOrigin">localhost</code>.</p>
+      </div>
+      <ol class="capture-steps">
+        <li>Show your bookmarks bar with <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> (Mac: <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>).</li>
+        <li>Drag <b>Add to Stashov</b> into the bar.</li>
+        <li>Open any product page and click it. Stashov jumps to the Gate and opens the review with the page’s title, image and price.</li>
+      </ol>
+      <p class="capture-note">The bookmarklet reads JSON-LD and OpenGraph in your browser, with a visible-price fallback that is clearly marked low confidence. Stores that block server-side requests can still be captured.</p>
+      <div class="capture-code-block">
+        <div class="capture-code-head"><span>OR COPY THE BOOKMARKLET</span><button class="mini-btn" type="button" id="captureCopyBtn">Copy code</button></div>
+        <textarea class="capture-code" id="captureCode" rows="3" readonly spellcheck="false" aria-label="Bookmarklet code"></textarea>
+        <p class="capture-note">Create a bookmark, paste this into its URL field, and name it “Add to Stashov”.</p>
+      </div>
+      <p class="capture-mobile"><b>On a phone?</b> Install Stashov to your home screen and use your browser's Share sheet. The installed app registers a share target that opens the pre-gate review automatically. On a local network that requires HTTPS and an access token.</p>
+      <div class="editor-actions"><button class="btn ghost sm" type="button" id="captureDone">Done</button></div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="promoteDialog" class="gate-dialog promote-dialog" aria-labelledby="promoteTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">PRE-GATE REVIEW</p>
+        <h2 id="promoteTitle">Check it before<br><em>the clock starts.</em></h2>
+        <p class="settings-sub">Nothing is gated until you confirm. These values were read from the saved page — correct anything that is wrong.</p>
+      </div>
+      <button class="icon-btn" type="button" id="promoteClose" aria-label="Cancel promotion"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="promoteForm" class="gate-form" novalidate>
+      <input type="hidden" id="promoteId" />
+      <div class="promote-summary">
+        <div class="promote-media" id="promoteMedia"></div>
+        <div class="promote-facts">
+          <div class="promote-capture" id="promoteCaptureStatus"></div>
+          <a class="wish-source-link" id="promoteUrl" href="#" target="_blank" rel="noopener noreferrer">—</a>
+        </div>
+      </div>
+      <div class="promote-duplicates" id="promoteDuplicates" role="status" hidden></div>
+      <div class="field"><label for="promoteTitleInput">Title</label><input type="text" id="promoteTitleInput" maxlength="220" autocomplete="off" /></div>
+      <div class="field"><label for="promoteBrand">Brand</label><input type="text" id="promoteBrand" maxlength="120" autocomplete="off" /></div>
+      <div class="field"><label for="promoteCategory">Cluster</label><select id="promoteCategory"></select></div>
+      <div class="price-edit-row">
+        <div class="field"><label for="promoteRetail">Retail price (USD)</label><input type="number" id="promoteRetail" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank if unknown" /></div>
+        <div class="field"><label for="promoteFloor">Price you expect to pay</label><input type="number" id="promoteFloor" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank if unknown" /></div>
+      </div>
+      <div class="field"><label for="promoteSource">Where you found it</label><input type="text" id="promoteSource" maxlength="180" autocomplete="off" placeholder="e.g. END Clothing sale" /></div>
+      <p class="field-note">A price you change is saved as manual. Leave both prices blank to start the gate with the price pending.</p>
+      <p class="form-error" id="promoteError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="promoteCancel">Cancel</button>
+        <button class="btn" type="submit" id="promoteSubmit"><svg class="icon"><use href="#i-gate"/></svg> Start 14-day gate</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="wishEditDialog" class="gate-dialog" aria-labelledby="wishEditTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">WISH DETAILS</p>
+        <h2 id="wishEditTitle">Correct the record.</h2>
+        <p class="settings-sub">Captured prices can be wrong. Edit them and the label becomes “manual” so the Gate stays honest.</p>
+      </div>
+      <button class="icon-btn" type="button" id="wishEditClose" aria-label="Close wish editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="wishEditForm" class="gate-form" novalidate>
+      <input type="hidden" id="wishEditId" />
+      <div class="field"><label for="wishEditTitleInput">Title</label><input type="text" id="wishEditTitleInput" maxlength="180" autocomplete="off" /></div>
+      <div class="field"><label for="wishEditBrand">Brand</label><input type="text" id="wishEditBrand" maxlength="120" autocomplete="off" /></div>
+      <div class="price-edit-row">
+        <div class="field"><label for="wishEditRetail">Retail price (USD)</label><input type="number" id="wishEditRetail" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank if unknown" /></div>
+        <div class="field"><label for="wishEditFloor">Price you expect to pay</label><input type="number" id="wishEditFloor" min="0" step="0.01" inputmode="decimal" placeholder="Leave blank if unknown" /></div>
+      </div>
+      <div class="field"><label for="wishEditSource">Where you found it</label><input type="text" id="wishEditSource" maxlength="180" autocomplete="off" placeholder="e.g. END Clothing sale" /></div>
+      <div class="field"><label for="wishEditTarget">Target price (USD, optional)</label><input type="number" id="wishEditTarget" min="0" step="0.01" inputmode="decimal" placeholder="Alert me when the price drops to this" /><p class="field-note">The Gate flags this wish when the captured price meets your target.</p></div>
+      <div class="price-provenance"><svg class="icon"><use href="#i-spark"/></svg><span id="wishEditProvenance">—</span></div>
+      <a class="wish-source-link" id="wishEditUrl" href="#" target="_blank" rel="noopener noreferrer">—</a>
+      <p class="form-error" id="wishEditError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="wishEditCancel">Cancel</button>
+        <button class="btn" type="submit" id="wishEditSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save details</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="budgetDialog" class="gate-dialog" aria-labelledby="budgetTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">MONTHLY BUDGET</p>
+        <h2 id="budgetTitle">Set the ceiling.</h2>
+        <p class="settings-sub">The Gate spends against these caps from the first of each month. Blank category caps are unlimited.</p>
+      </div>
+      <button class="icon-btn" type="button" id="budgetClose" aria-label="Close budget editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="budgetForm" class="gate-form" novalidate>
+      <div class="field"><label for="budgetCapInput">Monthly discretionary cap (USD)</label><input type="number" id="budgetCapInput" min="0" step="0.01" inputmode="decimal" /></div>
+      <div class="budget-cat-head"><b>CATEGORY CAPS</b><span>Optional</span></div>
+      <div class="budget-cat-list" id="budgetCategoryList"></div>
+      <p class="form-error" id="budgetError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="budgetCancel">Cancel</button>
+        <button class="btn" type="submit" id="budgetSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save budget</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="voidDialog" class="gate-dialog" aria-labelledby="voidTitle">
+  <div class="gate-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">LEDGER CORRECTION</p>
+        <h2 id="voidTitle">Void this entry?</h2>
+        <p class="settings-sub" id="voidCopy">—</p>
+      </div>
+      <button class="icon-btn" type="button" id="voidClose" aria-label="Close void dialog"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="voidForm" class="gate-form" novalidate>
+      <input type="hidden" id="voidEntryId" />
+      <div class="void-preview" id="voidPreview"></div>
+      <div class="field"><label for="voidReason">Reason (optional)</label><input type="text" id="voidReason" maxlength="300" autocomplete="off" placeholder="e.g. recorded twice, returned, wrong price" /></div>
+      <p class="form-error" id="voidError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="voidCancel">Keep entry</button>
+        <button class="btn danger" type="submit" id="voidSubmit"><svg class="icon"><use href="#i-x"/></svg> Void entry</button>
+      </div>
     </form>
   </div>
 </dialog>

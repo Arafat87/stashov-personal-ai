@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "clusters": {
+    "Life Hacks, Utilities & Reference": {
+      "mode": "reference"
+    },
+    "Programming, Cloud & Dev Tools": {
+      "mode": "reference"
+    },
+    "Career, Jobs & Interview Prep": {
+      "mode": "reference"
+    },
+    "AI Models, Agents & Infra": {
+      "mode": "reference"
+    },
+    "Watches, Footwear & Accessories": {
+      "mode": "reference",
+      "hero_item_id": "wl_04"
+    },
+    "Global Sourcing & Proxies": {
+      "mode": "reference"
+    },
+    "Menswear & Streetwear": {
+      "mode": "reference",
+      "hero_item_id": "wl_09"
+    },
+    "Business, Finance & Auto/Real Estate": {
+      "mode": "product"
+    },
+    "Soccer Kits & Sportswear": {
+      "mode": "reference",
+      "hero_item_id": "wl_07"
+    },
+    "Cybersecurity & NetSec": {
+      "mode": "reference"
+    },
+    "Food, Halal & Specialty Groceries": {
+      "mode": "product"
+    },
+    "Fragrances & Cologne": {
+      "mode": "reference",
+      "hero_item_id": "wl_01"
+    },
+    "Skincare, Health & Protocols": {
+      "mode": "reference",
+      "hero_item_id": "wl_06"
+    },
+    "Gaming, Mods & Esports": {
+      "mode": "reference"
+    }
+  }
+}

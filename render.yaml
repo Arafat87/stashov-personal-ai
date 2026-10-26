@@ -6,6 +6,10 @@ services:
     buildCommand: "npm ci"
     startCommand: "npm start"
     envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: STASHOV_ACCESS_TOKEN
+        sync: false
       - key: NEBIUS_API_KEY
         sync: false
       - key: NEBIUS_BASE_URL
@@ -22,5 +26,5 @@ services:
         value: zai-org/GLM-5.3-Flash
       - key: MODEL_EMBEDDING
         value: Qwen/Qwen3-Embedding-8B
-    healthCheckPath: /api/vault
+    healthCheckPath: /api/health
     autoDeploy: true
