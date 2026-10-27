@@ -3139,6 +3139,28 @@ function renderHelpCategories() {
   `).join('');
 }
 
+/**
+ * The category rail scrolls horizontally, so the active chip can sit off
+ * screen. Centre it only when it is actually out of view, which keeps a manual
+ * scroll position intact while still showing which filter is applied.
+ */
+function revealHelpCategory() {
+  const row = $('#helpCategories');
+  if (!row) return;
+  const active = row.querySelector('.help-cat-chip.is-active');
+  if (!active) return;
+  const rowRect = row.getBoundingClientRect();
+  const chipRect = active.getBoundingClientRect();
+  const offset = chipRect.left - rowRect.left;
+  const left = row.scrollLeft + offset;
+  const right = left + chipRect.width;
+  const edge = 16;
+  const viewLeft = row.scrollLeft + edge;
+  const viewRight = row.scrollLeft + row.clientWidth - edge;
+  if (left >= viewLeft && right <= viewRight) return;
+  row.scrollLeft = Math.max(0, left - (row.clientWidth - chipRect.width) / 2);
+}
+
 function renderHelp() {
   const body = $('#helpBody');
   const count = $('#helpCount');
@@ -3194,6 +3216,7 @@ function openHelp() {
   if (dialog && !dialog.open) dialog.showModal();
   if (!state.help.loaded && !state.help.loading) loadGlossary();
   else renderHelp();
+  window.setTimeout(revealHelpCategory, 70);
   window.setTimeout(() => { const input = $('#helpSearch'); if (input) input.focus(); }, 60);
 }
 
@@ -4805,7 +4828,19 @@ function bindEvents() {
       if (!chip) return;
       state.help.category = chip.dataset.helpCategory;
       renderHelp();
+      revealHelpCategory();
     });
+    // A vertical wheel over the rail should move it sideways; the container
+    // never scrolls vertically, so nothing else competes for the gesture.
+    helpCategories.addEventListener('wheel', (event) => {
+      if (!event.deltaY || event.deltaX) return;
+      const max = helpCategories.scrollWidth - helpCategories.clientWidth;
+      if (max <= 1) return;
+      const next = Math.max(0, Math.min(max, helpCategories.scrollLeft + event.deltaY));
+      if (next === helpCategories.scrollLeft) return;
+      event.preventDefault();
+      helpCategories.scrollLeft = next;
+    }, { passive: false });
   }
   const helpBody = $('#helpBody');
   if (helpBody) {
@@ -4816,6 +4851,7 @@ function bindEvents() {
         state.help.category = 'ALL';
         if ($('#helpSearch')) $('#helpSearch').value = '';
         renderHelp();
+        revealHelpCategory();
       }
     });
   }
