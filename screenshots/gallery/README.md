@@ -1,6 +1,6 @@
 # Stashov — submission gallery
 
-Ten images, in the order the submission form expects. Every file is **1800 × 1200 px (3:2)**, PNG, and under 5 MB.
+Ten images, in the order the submission form expects. Every file is **1800 × 1200 px (3:2)**, PNG, and under 5 MB. `thumbs/` holds 720 × 480 copies for the main README table; the files in this folder are the uploads.
 
 | # | File | Caption |
 |---|------|---------|

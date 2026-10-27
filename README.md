@@ -68,6 +68,65 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 ---
 
+## Gallery
+
+Ten frames captured from the running app, each **1800 × 1200 (3:2)** and under 5 MB — the same set used for the submission gallery, in upload order. Every thumbnail below opens the full-resolution file; the complete set lives in [`screenshots/gallery/`](screenshots/gallery), with capture notes in its [README](screenshots/gallery/README.md).
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/gate-review.png"><img src="screenshots/gallery/thumbs/gate-review.png" width="430" alt="Pre-gate review dialog"></a><br>
+      <sub><b>1. gate-review.png</b> — Pre-gate review dialog with JSON-LD capture, duplicate warnings, price provenance</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/impulse-gate.png"><img src="screenshots/gallery/thumbs/impulse-gate.png" width="430" alt="Gate lanes with countdown timers"></a><br>
+      <sub><b>2. impulse-gate.png</b> — Gate lane view: cooling/ready/bought/skipped/snoozed with countdown timers</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/library-audit.png"><img src="screenshots/gallery/thumbs/library-audit.png" width="430" alt="Reference library with ten sections"></a><br>
+      <sub><b>3. library-audit.png</b> — Reference library with 10 sections, health status badges, duplicate clusters</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/routine-conflict.png"><img src="screenshots/gallery/thumbs/routine-conflict.png" width="430" alt="Clear Skin protocol conflict"></a><br>
+      <sub><b>4. routine-conflict.png</b> — Clear Skin PM protocol flagging AHA/BHA conflict with Adapalene</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/capture-bookmarklet.png"><img src="screenshots/gallery/thumbs/capture-bookmarklet.png" width="430" alt="Capture bookmarklet dialog"></a><br>
+      <sub><b>5. capture-bookmarklet.png</b> — Capture dialog with draggable bookmarklet and mobile fallback note</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/telemetry-console.png"><img src="screenshots/gallery/thumbs/telemetry-console.png" width="430" alt="Router telemetry console"></a><br>
+      <sub><b>6. telemetry-console.png</b> — Nebius Token Factory routing latency, token usage, cost per call</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/profile-editor.png"><img src="screenshots/gallery/thumbs/profile-editor.png" width="430" alt="You profile"></a><br>
+      <sub><b>7. profile-editor.png</b> — Editable You profile: sizes, constraints, owned inventory, scent notes</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/cluster-cards.png"><img src="screenshots/gallery/thumbs/cluster-cards.png" width="430" alt="Fourteen cluster reference cards"></a><br>
+      <sub><b>8. cluster-cards.png</b> — 14 generated 800×600 SVG reference cards</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/mobile-share.png"><img src="screenshots/gallery/thumbs/mobile-share.png" width="430" alt="PWA share target flow"></a><br>
+      <sub><b>9. mobile-share.png</b> — PWA Web Share Target flow from Android Chrome</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/ledger-budget.png"><img src="screenshots/gallery/thumbs/ledger-budget.png" width="430" alt="Monthly spend ledger"></a><br>
+      <sub><b>10. ledger-budget.png</b> — Monthly fun-money ledger with category caps and history</sub>
+    </td>
+  </tr>
+</table>
+
+Frames 1–7 and 10 are live UI captured in headless Chrome at 2400×1600 and downscaled. Frame 8 renders the actual `public/cluster-cards/*.svg` files; frame 9 pairs two real phone captures with the manifest's `share_target` block. The Gate and ledger frames used a throwaway vault copy seeded through the app's own API, so `data/vault.json` was never modified and every lane could be shown populated.
+
 ## Vocabulary
 
 Every room, status, verdict, price label, shelf, guardrail, and data term is defined in **[docs/GLOSSARY.md](docs/GLOSSARY.md)**. It starts with the pairs that are easiest to confuse: Active vs Cooling, Ready vs "gate cleared", Blocked vs Locked vs Bot-blocked, and verdict vs status.
