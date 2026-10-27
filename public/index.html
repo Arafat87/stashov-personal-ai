@@ -720,6 +720,10 @@
         <button class="btn ghost sm" type="button" id="routineParseBtn"><svg class="icon"><use href="#i-spark"/></svg> Generate structure</button>
         <span class="micro" id="routineParseNote">Nothing parsed yet.</span>
       </div>
+      <div class="routine-privacy">
+        <button type="button" class="filter-chip is-active" id="routineWebLookupToggle" aria-pressed="true" title="Product names missing from your Gate are sent to a search engine.">Web lookup: on</button>
+        <span class="micro">Off keeps product names on this device.</span>
+      </div>
       <div class="form-row">
         <div class="field"><label for="routineTitle">Title</label><input type="text" id="routineTitle" maxlength="120" autocomplete="off" placeholder="e.g. Barrier repair AM/PM" /></div>
         <div class="field"><label for="routineCategory">Category</label><input type="text" id="routineCategory" maxlength="100" autocomplete="off" placeholder="Skincare, Health &amp; Protocols" /></div>
@@ -745,6 +749,19 @@
           <button class="btn ghost sm" type="button" id="routineProductsMore" hidden>Show more</button>
         </div>
         <p class="field-note">Tick the exact products this rule uses. Search scans the whole wishlist, ticked items stay ticked while you filter, and a routine stores up to 12 links.</p>
+      </div>
+      <div class="field" id="routineWebField" hidden>
+        <div class="routine-web-head">
+          <span class="routine-web-label">Found on the web</span>
+          <span class="routine-web-tools"><span id="routineWebCount">0 products</span><button class="btn ghost sm" type="button" id="routineWebRetry" hidden>Look up again</button><button class="btn ghost sm routine-web-send" type="button" id="routineWebSendBtn" hidden title="Create a wish for each product and start its 14-day cooling clock."><svg class="icon"><use href="#i-gate"/></svg><span id="routineWebSendLabel">Send all to Gate</span></button></span>
+        </div>
+        <div class="routine-web-status" id="routineWebStatus" role="status" hidden></div>
+        <div class="routine-web-undo" id="routineWebUndo" hidden>
+          <span id="routineWebUndoText"></span>
+          <button class="btn ghost sm" type="button" id="routineWebUndoBtn">Undo</button>
+        </div>
+        <div class="routine-web-grid" id="routineWebProducts"></div>
+        <p class="field-note">These are not in your Gate. Stashov searched the open web for the names above and cached the photo; remove a wrong match first. Sending starts each wish's 14-day cooldown.</p>
       </div>
       <div class="field"><label for="routineConflict">Conflict guardrail</label><textarea id="routineConflict" rows="3" maxlength="500" placeholder="What should the gate check before this routine is used?" ></textarea></div>
       <div class="field"><label for="routineSource">Source / where you found it</label><input type="text" id="routineSource" maxlength="160" autocomplete="off" placeholder="TikTok, YouTube, dermatologist, product label…" /></div>

@@ -78,6 +78,8 @@ dialog::backdrop { background: rgba(2, 4, 7, 0.74); backdrop-filter: blur(9px); 
 .library-edit-meta strong { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--text-2); }
 .routine-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .routine-actions .micro { color: var(--dim); }
+.routine-privacy { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.routine-privacy .micro { color: var(--dim); }
 .section-editor .field label, .card-form .field label, .photo-form .field label, .cluster-form .field label { color: var(--muted); }
 .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 3px; color: var(--dim); }
 .color-field { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 7px; align-items: center; }
@@ -152,6 +154,33 @@ dialog::backdrop { background: rgba(2, 4, 7, 0.74); backdrop-filter: blur(9px); 
 .routine-product-check .icon { width: 9px; height: 9px; }
 .routine-product.is-selected .routine-product-check { border-color: var(--lime); background: var(--lime); color: #071008; }
 .routine-products-empty { grid-column: 1 / -1; padding: 12px; border: 1px dashed var(--line); border-radius: 9px; font-size: 10.5px; color: var(--dim); }
+.routine-web-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.routine-web-label { font: 500 9px/1.3 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+.routine-web-tools { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.routine-web-tools > span { font: 500 8.5px/1.3 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.routine-web-tools .btn { padding: 4px 8px; font-size: 9px; }
+.routine-web-tools .btn[hidden] { display: none; }
+.routine-web-tools .routine-web-send { border-color: rgba(82, 242, 171, 0.35); color: var(--mint); }
+.routine-web-tools .routine-web-send:hover { border-color: rgba(82, 242, 171, 0.55); background: rgba(82, 242, 171, 0.08); }
+.routine-web-send .icon { width: 11px; height: 11px; }
+.routine-web-send[hidden] { display: none; }
+.routine-web-status { font: 500 9.5px/1.5 var(--font-mono); letter-spacing: 0.03em; color: var(--dim); }
+.routine-web-status[hidden] { display: none; }
+.routine-web-status.is-busy { color: var(--cyan); }
+.routine-web-status.is-ok { color: var(--mint); }
+.routine-web-status.is-warn { color: var(--amber); }
+.routine-web-undo { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 10px; border: 1px solid rgba(82, 242, 171, 0.24); border-radius: 9px; background: rgba(82, 242, 171, 0.045); }
+.routine-web-undo span { font: 500 9.5px/1.5 var(--font-mono); letter-spacing: 0.03em; color: var(--mint); }
+.routine-web-undo .btn { flex: none; padding: 4px 8px; font-size: 9px; }
+.routine-web-undo[hidden] { display: none; }
+.routine-web-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.routine-web-card { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px; border: 1px solid rgba(99, 230, 255, 0.2); border-radius: 9px; background: rgba(99, 230, 255, 0.035); }
+.routine-web-media { flex: none; display: block; width: 34px; height: 34px; border-radius: 7px; overflow: hidden; background: #0a1119; }
+.routine-web-media img, .routine-web-media .routine-product-fallback { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.routine-web-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.routine-web-copy b { overflow: hidden; font-size: 10px; font-weight: 500; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
+.routine-web-copy small { overflow: hidden; font: 500 8px/1.3 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--cyan); white-space: nowrap; text-overflow: ellipsis; }
+.routine-web-card > .mini-btn { width: 22px; height: 22px; flex: none; }
 
 /* ————— GATE ACTIONS & SPEND LEDGER ————— */
 .gate-dialog { width: min(560px, calc(100vw - 28px)); }
@@ -317,7 +346,7 @@ dialog::backdrop { background: rgba(2, 4, 7, 0.74); backdrop-filter: blur(9px); 
   .ledger-body { padding: 14px 16px 17px; }
   .promote-summary { grid-template-columns: 1fr; }
   .promote-media { aspect-ratio: 16 / 7; max-height: 170px; }
-  .routine-products { grid-template-columns: 1fr; }
+  .routine-products, .routine-web-grid { grid-template-columns: 1fr; }
   .ledger-stat { padding: 10px; }
   .ledger-stat strong { font-size: 20px; }
   .settings-head { padding: 16px 16px 13px; }

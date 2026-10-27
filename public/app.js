@@ -85,6 +85,15 @@ const MODEL_META = {
 
 const ROUTINE_PRODUCT_CAP = 12;
 const ROUTINE_PRODUCTS_PAGE = 60;
+const ROUTINE_WEB_LOOKUP_KEY = 'stashov.routineWebLookup';
+
+function readRoutineWebLookupPreference() {
+  try { return window.localStorage.getItem(ROUTINE_WEB_LOOKUP_KEY) !== 'off'; } catch (_) { return true; }
+}
+
+function rememberRoutineWebLookup(enabled) {
+  try { window.localStorage.setItem(ROUTINE_WEB_LOOKUP_KEY, enabled ? 'on' : 'off'); } catch (_) {}
+}
 
 const state = {
   vault: null,
@@ -115,6 +124,15 @@ const state = {
   routineLimit: ROUTINE_PRODUCTS_PAGE,
   routineMatchCount: 0,
   routineSearchTimer: null,
+  routineQueries: [],
+  routineWebProducts: [],
+  routineLookupRun: 0,
+  routineLookupBusy: false,
+  routineWebLookup: readRoutineWebLookupPreference(),
+  routineGateBusy: false,
+  routineKey: '',
+  routineLastGateSend: [],
+  routineLastGateSendKey: '',
   auditId: null,
   promotion: null,
   clusterDialog: { name: '', mode: 'product', default_mode: 'product', hero_item_id: '', cover: '' },
@@ -2158,12 +2176,16 @@ function wishCard(w, originalIndex, renderIndex) {
   const archivedNote = status === 'bought'
     ? `Bought for ${money(w.purchase_price ?? w.lowest_verified_price, 2)}${w.purchase_source ? ' · ' + esc(w.purchase_source) : ''}`
     : `Skipped${w.skip_reason ? ' · ' + esc(w.skip_reason) : ''}`;
+  const removeButton = status === 'bought'
+    ? ''
+    : `<button type="button" class="btn quiet sm gate-remove" data-gate-remove="${esc(w.id)}" aria-label="Remove ${esc(w.title)} from the Gate" title="Delete this wish and unlink it from every routine. Purchases already in the ledger are never deleted."><svg class="icon"><use href="#i-trash"/></svg>Remove</button>`;
   const actionMarkup = archived
-    ? `<div class="gate-archived"><div class="gate-archived-note"><svg class="icon"><use href="#${status === 'bought' ? 'i-check' : 'i-x'}"/></svg><span>${archivedNote}</span></div><button type="button" class="btn ghost sm" data-gate-action="reopen" data-gate-id="${esc(w.id)}"><svg class="icon"><use href="#i-refresh"/></svg>Reopen</button></div>`
+    ? `<div class="gate-archived"><div class="gate-archived-note"><svg class="icon"><use href="#${status === 'bought' ? 'i-check' : 'i-x'}"/></svg><span>${archivedNote}</span></div><button type="button" class="btn ghost sm" data-gate-action="reopen" data-gate-id="${esc(w.id)}"><svg class="icon"><use href="#i-refresh"/></svg>Reopen</button>${removeButton}</div>`
     : `<div class="gate-actions" role="group" aria-label="Gate actions for ${esc(w.title)}">
         <button type="button" class="btn sm gate-buy" data-gate-action="buy" data-gate-id="${esc(w.id)}" ${canBuy ? '' : 'disabled'} title="${canBuy ? 'Record this purchase in the spend ledger' : `Locked for ${coolingLeft} more ${coolingLeft === 1 ? 'day' : 'days'}`}"><svg class="icon"><use href="#i-coin"/></svg>${canBuy ? 'Buy' : `Locked ${coolingLeft}d`}</button>
         <button type="button" class="btn ghost sm" data-gate-action="snooze" data-gate-id="${esc(w.id)}" aria-label="Snooze ${esc(w.title)}"><svg class="icon"><use href="#i-clock"/></svg>Snooze</button>
         <button type="button" class="btn quiet sm" data-gate-action="skip" data-gate-id="${esc(w.id)}" aria-label="Skip ${esc(w.title)}"><svg class="icon"><use href="#i-x"/></svg>Skip</button>
+        ${removeButton}
       </div>`;
   const lowConfidence = hasPrice && w.price_confidence === 'low';
   const priceMarkup = hasPrice
@@ -2269,6 +2291,22 @@ function openGateAction(id, action) {
   renderGateActionBudget();
   if (!dialog.open) dialog.showModal();
   if (isBuy && $('#gateAmount')) window.setTimeout(() => $('#gateAmount').focus(), 80);
+}
+
+async function removeGateWish(id, btn) {
+  const item = state.vault ? (state.vault.wishlist || []).find((wish) => wish.id === id) : null;
+  if (!item || (btn && btn.disabled)) return;
+  const ok = window.confirm(`Remove “${item.title}” from the Gate?\n\nThis deletes the wish and unlinks it from every routine. Purchase history in the ledger is never deleted.`);
+  if (!ok) return;
+  busy(btn, true, 'Removing');
+  try {
+    await deleteJSON(`/api/wishlist/${encodeURIComponent(id)}`);
+    await refreshVault();
+    toast(`Removed “${item.title}” from the Gate.`);
+  } catch (err) {
+    if (btn) busy(btn, false);
+    toast(err.message || 'Could not remove that wish.', 'err');
+  }
 }
 
 function renderGateActionBudget() {
@@ -2687,9 +2725,10 @@ function renderProtocolsView(v) {
   grid.innerHTML = list.map((p, i) => {
     const steps = (p.steps || []).map((step) => `<li>${esc(step)}</li>`).join('');
     const linkedProducts = (p.linked_wishlist_ids || []).map((id) => wishById.get(id)).filter(Boolean);
+    const webProducts = Array.isArray(p.products) ? p.products : [];
     const links = linkedProducts.length;
-    const productRail = linkedProducts.length
-      ? `<div class="proto-products"><span class="proto-products-label">PRODUCTS IN THIS RULE</span><div class="proto-products-rail">${linkedProducts.slice(0, 4).map((wish, productIndex) => {
+    const railItems = [
+      ...linkedProducts.slice(0, 4).map((wish, productIndex) => {
         const image = safeImage(wish.image);
         const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
         const price = Number(wish.lowest_verified_price) > 0 ? money(wish.lowest_verified_price, 2) : 'Price pending';
@@ -2697,7 +2736,22 @@ function renderProtocolsView(v) {
           ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="proto-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
           <span class="proto-product-copy"><b>${esc(wish.title)}</b><small>${esc(wish.brand || 'PRIVATE SAVE')} · ${price}</small></span>
         </button>`;
-      }).join('')}</div></div>`
+      }),
+      ...webProducts
+        .filter((product) => !linkedProducts.some((wish) => wish.url && wish.url === product.url))
+        .slice(0, Math.max(0, 4 - linkedProducts.length))
+        .map((product) => {
+          const image = safeImage(product.image);
+          const initial = String(product.title || '?').trim().charAt(0).toUpperCase() || '?';
+          const detail = [product.brand || product.domain, Number(product.price) > 0 ? money(product.price, 2) : ''].filter(Boolean).join(' · ');
+          return `<a class="proto-product is-web" href="${esc(product.url)}" target="_blank" rel="noopener noreferrer" title="Open ${esc(product.title)} on the web">
+            ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="proto-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
+            <span class="proto-product-copy"><b>${esc(product.title)}</b><small>WEB · ${esc(detail || 'Not in the Gate')}</small></span>
+          </a>`;
+        }),
+    ];
+    const productRail = railItems.length
+      ? `<div class="proto-products"><span class="proto-products-label">PRODUCTS IN THIS RULE</span><div class="proto-products-rail">${railItems.join('')}</div></div>`
       : '';
     return `
     <article class="protocol" style="--i:${Math.min(i, 8)}" data-proto-id="${esc(p.id)}">
@@ -2712,7 +2766,7 @@ function renderProtocolsView(v) {
       <ol class="steps">${steps}</ol>
       <div class="proto-foot">
         <span class="ok"><svg class="icon"><use href="#i-check"/></svg>${esc(p.snapshot_status || 'Snapshot archived')}</span>
-        <span>${links} gate ${links === 1 ? 'link' : 'links'}</span>
+        <span>${links} gate ${links === 1 ? 'link' : 'links'}${webProducts.length ? ` · ${webProducts.length} web` : ''}</span>
       </div>
     </article>`;
   }).join('');
@@ -2749,6 +2803,288 @@ function resetRoutineProductFilters() {
     toggle.classList.remove('is-active');
     toggle.setAttribute('aria-pressed', 'false');
   }
+}
+
+function setRoutineLookupStatus(message, tone = '') {
+  const el = $('#routineWebStatus');
+  if (!el) return;
+  el.hidden = !message;
+  el.textContent = message || '';
+  el.className = `routine-web-status${tone ? ` is-${tone}` : ''}`;
+}
+
+function syncRoutineWebLookupToggle() {
+  const btn = $('#routineWebLookupToggle');
+  if (!btn) return;
+  const enabled = Boolean(state.routineWebLookup);
+  btn.textContent = `Web lookup: ${enabled ? 'on' : 'off'}`;
+  btn.classList.toggle('is-active', enabled);
+  btn.setAttribute('aria-pressed', String(enabled));
+  btn.title = enabled
+    ? 'Product names missing from your Gate are sent to a search engine.'
+    : 'Nothing leaves this device; only products already in your Gate are attached.';
+}
+
+function setRoutineWebLookup(enabled) {
+  const next = Boolean(enabled);
+  if (next === state.routineWebLookup) return;
+  state.routineWebLookup = next;
+  rememberRoutineWebLookup(next);
+  syncRoutineWebLookupToggle();
+  if (!next) {
+    state.routineLookupRun += 1;
+    state.routineLookupBusy = false;
+    state.routineQueries = [];
+    setRoutineLookupStatus('');
+    renderRoutineWebProducts();
+    toast('Web lookup is off. Product names stay on this device.', 'warn');
+  } else {
+    toast('Web lookup is on. Generate the routine to search for missing products.');
+  }
+}
+
+function linkRoutineWish(id) {
+  if (!id) return false;
+  const ids = new Set(state.routineLinkedIds || []);
+  if (ids.has(id)) return true;
+  if (ids.size >= ROUTINE_PRODUCT_CAP) return false;
+  ids.add(id);
+  state.routineLinkedIds = Array.from(ids);
+  return true;
+}
+
+function routineWishDetails(product) {
+  const price = Number(product.price) > 0 ? Number(product.price) : null;
+  const lowConfidence = String(product.price_source || '').toLowerCase() === 'dom';
+  const domain = String(product.domain || '').trim();
+  return {
+    title: product.title,
+    brand: product.brand || '',
+    category: $('#routineCategory') ? $('#routineCategory').value.trim() : '',
+    retail_price: price,
+    lowest_verified_price: price,
+    captured_price: price,
+    image: product.image || '',
+    best_source: price === null
+      ? 'Add a verified source'
+      : `${domain || 'Product'} page${lowConfidence ? ' (low-confidence visible price)' : ' (captured from routine lookup)'}`,
+    price_source: product.price_source || 'none',
+    price_confidence: price === null ? '' : (lowConfidence ? 'low' : 'high'),
+    price_reason: price === null ? 'The fetched product page did not expose a public price.' : '',
+    capture_mode: 'server',
+  };
+}
+
+async function sendRoutineProductsToGate() {
+  if (state.routineGateBusy) return;
+  const pending = (state.routineWebProducts || []).filter((product) => product && product.url);
+  if (!pending.length) return;
+  state.routineGateBusy = true;
+  state.routineLastGateSend = [];
+  state.routineLastGateSendKey = '';
+  renderRoutineWebProducts();
+  setRoutineLookupStatus(`Sending ${pending.length} ${pending.length === 1 ? 'product' : 'products'} to the Gate…`, 'busy');
+  const created = [];
+  let sent = 0;
+  let existing = 0;
+  let failed = 0;
+  let linked = 0;
+  let unlinked = 0;
+  try {
+    for (const product of pending) {
+      try {
+        const data = await postJSON('/api/promote-bookmark', {
+          url: product.url,
+          details: routineWishDetails(product),
+        });
+        const item = data && data.item;
+        if (!item || !item.id) throw new Error('The Gate did not return a wish.');
+        if (data.already_exists) {
+          existing += 1;
+        } else {
+          sent += 1;
+          created.push({ id: item.id, product: { ...product } });
+        }
+        state.routineWebProducts = (state.routineWebProducts || []).filter((entry) => entry.url !== product.url);
+        if (linkRoutineWish(item.id)) linked += 1;
+        else unlinked += 1;
+        setRoutineLookupStatus(`Sent ${sent + existing} of ${pending.length} to the Gate…`, 'busy');
+        renderRoutineWebProducts();
+      } catch (_) {
+        failed += 1;
+      }
+    }
+  } finally {
+    state.routineGateBusy = false;
+  }
+  state.routineLastGateSend = created;
+  state.routineLastGateSendKey = created.length ? (state.routineKey || 'new') : '';
+  if (!(state.routineWebProducts || []).length) {
+    state.routineQueries = [];
+    setRoutineLookupStatus('');
+  } else {
+    setRoutineLookupStatus('Some products are still waiting. Try again, or add them from the Gate.', 'warn');
+  }
+  renderRoutineWebProducts();
+  await refreshVault();
+  renderRoutineProducts();
+  const parts = [];
+  if (sent) parts.push(`${sent} sent to the Gate`);
+  if (existing) parts.push(`${existing} already in the Gate`);
+  if (failed) parts.push(`${failed} failed`);
+  let message = `${parts.join(' · ') || 'Nothing sent'}.`;
+  if (sent) message += ' Their 14-day cooldown has started.';
+  if (linked) message += ` ${linked} linked to this routine — save to keep the links.`;
+  if (unlinked) message += ` ${unlinked} could not be linked (12-link limit).`;
+  toast(message, failed ? 'warn' : 'ok');
+}
+
+async function undoSendRoutineProductsToGate() {
+  if (state.routineGateBusy) return;
+  const batch = Array.isArray(state.routineLastGateSend) ? state.routineLastGateSend.slice() : [];
+  if (!batch.length) return;
+  state.routineGateBusy = true;
+  renderRoutineWebProducts();
+  setRoutineLookupStatus(`Removing ${batch.length} ${batch.length === 1 ? 'wish' : 'wishes'} from the Gate…`, 'busy');
+  const removed = [];
+  const failed = [];
+  try {
+    for (const entry of batch) {
+      try {
+        await deleteJSON(`/api/wishlist/${encodeURIComponent(entry.id)}`);
+        removed.push(entry);
+      } catch (_) {
+        failed.push(entry);
+      }
+    }
+  } finally {
+    state.routineGateBusy = false;
+  }
+  if (removed.length) {
+    const removedIds = new Set(removed.map((entry) => entry.id));
+    state.routineLinkedIds = (state.routineLinkedIds || []).filter((id) => !removedIds.has(id));
+    for (const entry of removed) {
+      const product = entry.product;
+      if (!product || !product.url) continue;
+      if (!(state.routineWebProducts || []).some((item) => item.url === product.url)) {
+        state.routineWebProducts.push(product);
+      }
+    }
+    setRoutineLookupStatus(
+      `Undid ${removed.length} ${removed.length === 1 ? 'wish' : 'wishes'}. ${failed.length ? 'Some could not be removed.' : 'They are back in the web list.'}`,
+      failed.length ? 'warn' : 'ok'
+    );
+  } else {
+    setRoutineLookupStatus('Could not undo the last send. Remove the wishes from the Gate instead.', 'warn');
+  }
+  state.routineLastGateSend = failed;
+  state.routineLastGateSendKey = failed.length ? state.routineLastGateSendKey : '';
+  renderRoutineWebProducts();
+  await refreshVault();
+  renderRoutineProducts();
+  if (removed.length && failed.length) toast(`Undid ${removed.length}; ${failed.length} could not be removed.`, 'warn');
+  else if (removed.length) toast(`Undid ${removed.length} ${removed.length === 1 ? 'wish' : 'wishes'}.`);
+  else toast('Nothing could be undone.', 'err');
+}
+
+function renderRoutineWebProducts() {
+  const host = $('#routineWebProducts');
+  const field = $('#routineWebField');
+  const count = $('#routineWebCount');
+  const retry = $('#routineWebRetry');
+  const send = $('#routineWebSendBtn');
+  const sendLabel = $('#routineWebSendLabel');
+  const undo = $('#routineWebUndo');
+  const undoText = $('#routineWebUndoText');
+  const undoBtn = $('#routineWebUndoBtn');
+  if (!host || !field) return;
+  const products = Array.isArray(state.routineWebProducts) ? state.routineWebProducts : [];
+  const undoCount = Array.isArray(state.routineLastGateSend) ? state.routineLastGateSend.length : 0;
+  field.hidden = !products.length && !(state.routineQueries || []).length && !undoCount;
+  if (count) count.textContent = `${products.length} ${products.length === 1 ? 'product' : 'products'}`;
+  if (undo) {
+    undo.hidden = !undoCount;
+    if (undoText) undoText.textContent = `${undoCount} ${undoCount === 1 ? 'wish' : 'wishes'} from the last send ${undoCount === 1 ? 'is' : 'are'} in the Gate.`;
+    if (undoBtn) undoBtn.disabled = state.routineGateBusy;
+  }
+  if (retry) {
+    retry.hidden = !(state.routineQueries || []).length;
+    retry.disabled = state.routineLookupBusy;
+    retry.textContent = state.routineLookupBusy ? 'Looking up…' : 'Look up again';
+  }
+  if (send) {
+    send.hidden = !products.length;
+    send.disabled = state.routineGateBusy;
+    if (sendLabel) sendLabel.textContent = state.routineGateBusy ? 'Sending…' : `Send ${products.length} to Gate`;
+  }
+  if (!products.length) {
+    host.innerHTML = undoCount
+      ? '<p class="routine-products-empty">All found products are in the Gate. Undo restores them here.</p>'
+      : '<p class="routine-products-empty">No product pages matched yet. Keep the product lines specific, or add the item to the Gate first.</p>';
+    return;
+  }
+  host.innerHTML = products.map((product, index) => {
+    const image = safeImage(product.image);
+    const initial = String(product.title || '?').trim().charAt(0).toUpperCase() || '?';
+    const meta = [
+      product.brand || product.domain,
+      Number(product.price) > 0 ? money(product.price, 2) : '',
+      product.confidence === 'high' ? 'matched' : 'check match',
+    ].filter(Boolean).join(' · ');
+    return `<article class="routine-web-card">
+      <a class="routine-web-media" href="${esc(product.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(product.title)}">
+        ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="routine-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
+      </a>
+      <div class="routine-web-copy"><b>${esc(product.title)}</b><small>${esc(meta || 'Fetched from the web')}</small></div>
+      <button class="mini-btn danger" type="button" data-routine-web-remove="${index}" aria-label="Remove ${esc(product.title)}" title="Remove this match"><svg class="icon"><use href="#i-trash"/></svg></button>
+    </article>`;
+  }).join('');
+}
+
+async function lookupRoutineWebProducts(queries) {
+  const run = ++state.routineLookupRun;
+  const list = (Array.isArray(queries) ? queries : []).slice(0, 8);
+  state.routineQueries = list;
+  state.routineWebProducts = [];
+  state.routineLookupBusy = Boolean(list.length);
+  renderRoutineWebProducts();
+  if (!list.length) {
+    setRoutineLookupStatus('');
+    return;
+  }
+  setRoutineLookupStatus(`Looking up ${list.length} ${list.length === 1 ? 'product' : 'products'}…`, 'busy');
+  let done = 0;
+  let failed = 0;
+  const queue = list.slice();
+  const worker = async () => {
+    while (queue.length) {
+      if (run !== state.routineLookupRun) return;
+      const query = queue.shift();
+      try {
+        const data = await postJSON('/api/routines/lookup-product', { query });
+        if (run !== state.routineLookupRun) return;
+        const product = data.product;
+        if (product && product.url && !state.routineWebProducts.some((item) => item.url === product.url)) {
+          state.routineWebProducts.push(product);
+          renderRoutineWebProducts();
+        }
+      } catch (_) {
+        failed += 1;
+      }
+      done += 1;
+      if (run === state.routineLookupRun) {
+        setRoutineLookupStatus(`Checked ${done} of ${list.length}${state.routineWebProducts.length ? ` · ${state.routineWebProducts.length} found` : ''}…`, 'busy');
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, queue.length) }, worker));
+  if (run !== state.routineLookupRun) return;
+  state.routineLookupBusy = false;
+  renderRoutineWebProducts();
+  const found = state.routineWebProducts.length;
+  if (found) setRoutineLookupStatus(`Found ${found} of ${list.length}. Remove any wrong match before saving.`, 'ok');
+  else if (failed) setRoutineLookupStatus('Some lookups failed. Try again in a moment, or add these products from the Gate.', 'warn');
+  else setRoutineLookupStatus('No product pages matched. Add these products from the Gate instead.', 'warn');
 }
 
 function syncRoutineProductsFooter(total) {
@@ -2817,7 +3153,16 @@ function openRoutineDialog(protocol) {
   const dialog = $('#routineDialog');
   if (!dialog) return;
   state.routineLinkedIds = protocol ? (protocol.linked_wishlist_ids || []).slice() : [];
+  state.routineLookupRun += 1;
+  state.routineLookupBusy = false;
+  state.routineQueries = [];
+  state.routineWebProducts = protocol && Array.isArray(protocol.products) ? protocol.products.slice() : [];
   const isEdit = Boolean(protocol);
+  state.routineKey = isEdit ? protocol.id : 'new';
+  if (state.routineLastGateSendKey !== state.routineKey) {
+    state.routineLastGateSend = [];
+    state.routineLastGateSendKey = '';
+  }
   if ($('#routineId')) $('#routineId').value = isEdit ? protocol.id : '';
   if ($('#routineDialogTitle')) $('#routineDialogTitle').textContent = isEdit ? 'Edit routine' : 'Build a routine';
   if ($('#routinePaste')) $('#routinePaste').value = isEdit ? (protocol.source_text || (protocol.steps || []).join('\n')) : '';
@@ -2831,6 +3176,9 @@ function openRoutineDialog(protocol) {
   if ($('#routineParseNote')) $('#routineParseNote').textContent = isEdit ? `Editing ${(protocol.steps || []).length} saved steps.` : 'Nothing parsed yet.';
   resetRoutineProductFilters();
   renderRoutineProducts();
+  syncRoutineWebLookupToggle();
+  renderRoutineWebProducts();
+  setRoutineLookupStatus('');
   const error = $('#routineError');
   if (error) error.hidden = true;
   if (!dialog.open) dialog.showModal();
@@ -2862,6 +3210,22 @@ async function generateRoutine(btn) {
     resetRoutineProductFilters();
     renderRoutineProducts();
     toast('Routine structured. Review the guardrail, then save.');
+    const queries = Array.isArray(data.product_queries) ? data.product_queries : [];
+    if (state.routineWebLookup) {
+      lookupRoutineWebProducts(queries).catch(() => {
+        setRoutineLookupStatus('Product lookup failed. Add these products from the Gate instead.', 'warn');
+      });
+    } else {
+      state.routineLookupRun += 1;
+      state.routineQueries = [];
+      state.routineWebProducts = [];
+      state.routineLookupBusy = false;
+      renderRoutineWebProducts();
+      setRoutineLookupStatus('');
+      if (queries.length && $('#routineParseNote')) {
+        $('#routineParseNote').textContent = `Structured ${(routine.steps || []).length} steps · web lookup off.`;
+      }
+    }
   } catch (err) {
     if (error) { error.hidden = false; error.textContent = err.message; }
     toast(err.message, 'err');
@@ -2898,12 +3262,18 @@ async function saveRoutineForm(event) {
     conflict_alert: $('#routineConflict') ? $('#routineConflict').value.trim() : '',
     steps,
     source_text: $('#routinePaste') ? $('#routinePaste').value.trim() : '',
-    linked_wishlist_ids: state.routineLinkedIds
+    linked_wishlist_ids: state.routineLinkedIds,
+    products: state.routineWebProducts
   };
   busy(btn, true, 'Saving');
   try {
-    if (id) await putJSON(`/api/protocols/${encodeURIComponent(id)}`, payload);
-    else await postJSON('/api/protocols', payload);
+    const saved = id
+      ? await putJSON(`/api/protocols/${encodeURIComponent(id)}`, payload)
+      : await postJSON('/api/protocols', payload);
+    if (!id && saved && saved.protocol) {
+      state.routineKey = saved.protocol.id;
+      if (state.routineLastGateSend.length) state.routineLastGateSendKey = saved.protocol.id;
+    }
     const dialog = $('#routineDialog');
     if (dialog && dialog.open) dialog.close();
     await refreshVault();
@@ -4418,8 +4788,55 @@ function bindEvents() {
   if (routineCancel) routineCancel.addEventListener('click', () => $('#routineDialog').close());
   const routineParseBtn = $('#routineParseBtn');
   if (routineParseBtn) routineParseBtn.addEventListener('click', () => generateRoutine(routineParseBtn));
+  const routineWebLookupToggle = $('#routineWebLookupToggle');
+  if (routineWebLookupToggle) {
+    routineWebLookupToggle.addEventListener('click', () => {
+      setRoutineWebLookup(!state.routineWebLookup);
+    });
+  }
+  syncRoutineWebLookupToggle();
   const routineForm = $('#routineForm');
   if (routineForm) routineForm.addEventListener('submit', saveRoutineForm);
+  const routineWebProducts = $('#routineWebProducts');
+  if (routineWebProducts) {
+    routineWebProducts.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-routine-web-remove]');
+      if (!btn) return;
+      const index = Number(btn.dataset.routineWebRemove);
+      if (!Number.isInteger(index) || index < 0) return;
+      state.routineWebProducts.splice(index, 1);
+      renderRoutineWebProducts();
+    });
+  }
+  const routineWebRetry = $('#routineWebRetry');
+  if (routineWebRetry) {
+    routineWebRetry.addEventListener('click', () => {
+      if (state.routineLookupBusy) return;
+      lookupRoutineWebProducts(state.routineQueries).catch(() => {
+        setRoutineLookupStatus('Product lookup failed. Try again in a moment.', 'warn');
+      });
+    });
+  }
+  const routineWebSendBtn = $('#routineWebSendBtn');
+  if (routineWebSendBtn) {
+    routineWebSendBtn.addEventListener('click', () => {
+      sendRoutineProductsToGate().catch(() => {
+        state.routineGateBusy = false;
+        renderRoutineWebProducts();
+        toast('Sending to the Gate failed. Try again.', 'err');
+      });
+    });
+  }
+  const routineWebUndoBtn = $('#routineWebUndoBtn');
+  if (routineWebUndoBtn) {
+    routineWebUndoBtn.addEventListener('click', () => {
+      undoSendRoutineProductsToGate().catch(() => {
+        state.routineGateBusy = false;
+        renderRoutineWebProducts();
+        toast('Undo failed. Remove the wishes from the Gate instead.', 'err');
+      });
+    });
+  }
   const routineProducts = $('#routineProducts');
   if (routineProducts) {
     routineProducts.addEventListener('click', (event) => {
@@ -4517,6 +4934,8 @@ function bindEvents() {
   const wishGrid = $('#wishlistGrid');
   if (wishGrid) {
     wishGrid.addEventListener('click', (event) => {
+      const gateRemove = event.target.closest('[data-gate-remove]');
+      if (gateRemove) { removeGateWish(gateRemove.dataset.gateRemove, gateRemove); return; }
       const gateAction = event.target.closest('[data-gate-action]');
       if (gateAction) { openGateAction(gateAction.dataset.gateId, gateAction.dataset.gateAction); return; }
       const audit = event.target.closest('[data-audit]');

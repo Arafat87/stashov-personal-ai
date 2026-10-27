@@ -14,7 +14,8 @@ const { resolveImage, isCachedImage, safeRemoteUrl, IMAGE_DIR, BUNDLED_IMAGE_DIR
 const { loadSections, saveSections, createSection, updateSection, deleteSection, reorderSections } = require('./lib/sections');
 const { getClusterMetaMap, replaceStore, updateClusterMeta } = require('./lib/clusters');
 const { SECTIONS: LIBRARY_SECTIONS, librarySectionFor, librarySectionsWithCounts, findLibraryDuplicates, sectionById: librarySectionById } = require('./lib/library');
-const { parseRoutine } = require('./lib/routine');
+const { parseRoutine, matchWishlistIds } = require('./lib/routine');
+const { extractProductQueries, lookupProduct } = require('./lib/product-lookup');
 const { checkRoutine, createProtocol, updateProtocol, deleteProtocol } = require('./lib/protocols');
 const { ProfileError, updatePersonalContext } = require('./lib/profile');
 const {
@@ -28,6 +29,7 @@ const {
   startGate,
   updateBudget,
   updateWishlistDetails,
+  removeWish,
   reopenItem,
   voidLedgerEntry,
 } = require('./lib/gate');
@@ -837,10 +839,27 @@ async function handleRequest(req, res) {
       const body = await parseBody(req);
       const vault = loadVault();
       try {
-        const routine = parseRoutine(body.text || '', { wishlist: vault.wishlist || [] });
-        return sendJson(res, 200, { ok: true, routine });
+        const wishlist = vault.wishlist || [];
+        const routine = parseRoutine(body.text || '', { wishlist });
+        const product_queries = extractProductQueries(routine.steps)
+          .filter((query) => matchWishlistIds(query, wishlist).length === 0);
+        return sendJson(res, 200, { ok: true, routine, product_queries });
       } catch (err) {
         return sendJson(res, 400, { error: err.message });
+      }
+    }
+
+    // 4b. Look up a product the user pasted but has not saved in the Gate
+    if (req.method === 'POST' && pathname === '/api/routines/lookup-product') {
+      if (!rateLimit(req, 'routine-lookup', 20, 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Product lookups are limited to 20 per minute.' }, { 'Retry-After': '60' });
+      }
+      const body = await parseBody(req);
+      try {
+        const product = await lookupProduct(body.query || '');
+        return sendJson(res, 200, { ok: true, product });
+      } catch (err) {
+        return sendJson(res, 422, { error: err.message });
       }
     }
 
@@ -947,6 +966,28 @@ async function handleRequest(req, res) {
         const tel = recordTelemetry(vault, `Wish details updated: "${item.title.slice(0, 48)}"`, 'Manual gate edit', 'Spend Ledger', 0, 0, 0, 0);
         await saveVault(vault);
         return sendJson(res, 200, { ok: true, item, telemetry: tel });
+      } catch (err) {
+        return sendJson(res, err.status || 400, { error: err.message });
+      }
+    }
+
+    const wishlistDeleteMatch = pathname.match(/^\/api\/wishlist\/([a-z0-9_]+)$/i);
+    if (req.method === 'DELETE' && wishlistDeleteMatch) {
+      if (!rateLimit(req, 'wishlist-delete', 30, 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Wish deletion is limited to 30 per minute.' }, { 'Retry-After': '60' });
+      }
+      const vault = loadVault();
+      try {
+        const result = removeWish(vault, wishlistDeleteMatch[1]);
+        const tel = recordTelemetry(
+          vault,
+          `Wish removed: "${result.item.title.slice(0, 48)}"`,
+          'Manual gate cleanup',
+          'Spend Ledger',
+          0, 0, 0, 0
+        );
+        await saveVault(vault);
+        return sendJson(res, 200, { ok: true, ...result, telemetry: tel });
       } catch (err) {
         return sendJson(res, err.status || 400, { error: err.message });
       }

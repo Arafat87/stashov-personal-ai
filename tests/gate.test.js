@@ -9,6 +9,7 @@ const {
   gateSummary,
   normaliseWishlistItem,
   purchaseItem,
+  removeWish,
   reopenItem,
   skipItem,
   snoozeItem,
@@ -264,4 +265,56 @@ test('Voiding a purchase entry reopens its wish; voiding a skipped wish does not
   const reopened = reopenItem(vault, skipped.id, { now: NOW });
   assert.equal(reopened.item.status, 'ready');
   assert.equal(reopened.budget.spent, 0);
+});
+
+test('A bulk-send wish can be removed and its routine links are cleaned up', () => {
+  const bulk = item({ id: 'wl_bulk' });
+  const keep = item({ id: 'wl_keep', title: 'Keep this one' });
+  startGate(bulk, { now: NOW });
+  startGate(keep, { now: NOW });
+  const vault = vaultWith([bulk, keep], {
+    protocols: [{
+      id: 'proto_remove',
+      linked_wishlist_ids: ['wl_bulk', 'wl_keep'],
+      updated_at: '2020-01-01T00:00:00.000Z',
+    }],
+  });
+
+  const result = removeWish(vault, 'wl_bulk', { now: NOW });
+  assert.equal(result.item.id, 'wl_bulk');
+  assert.deepEqual(vault.wishlist.map((wish) => wish.id), ['wl_keep']);
+  assert.deepEqual(vault.protocols[0].linked_wishlist_ids, ['wl_keep']);
+  assert.equal(vault.protocols[0].updated_at, NOW.toISOString());
+  assert.equal(result.gate.counts.cooling, 1);
+});
+
+test('Removing a wish refuses purchased items and unknown ids', () => {
+  const bought = item({
+    id: 'wl_bought',
+    added_at: new Date(NOW.getTime() - 15 * DAY_MS).toISOString(),
+    unlock_at: new Date(NOW.getTime() - DAY_MS).toISOString(),
+  });
+  const vault = vaultWith([bought]);
+  ensureGateState(vault, NOW);
+  purchaseItem(vault, bought.id, { amount: 45, now: NOW });
+
+  assert.throws(
+    () => removeWish(vault, bought.id, { now: NOW }),
+    (err) => err instanceof GateError && err.status === 409 && /purchase|ledger/i.test(err.message)
+  );
+  assert.equal(vault.wishlist.length, 1);
+  assert.equal(vault.spending_ledger.length, 1);
+
+  // Even after a reopen voids the purchase, the ledger history must survive.
+  reopenItem(vault, bought.id, { reason: 'Kept for audit', now: NOW });
+  assert.throws(
+    () => removeWish(vault, bought.id, { now: NOW }),
+    (err) => err instanceof GateError && err.status === 409 && /ledger/i.test(err.message)
+  );
+  assert.equal(vault.wishlist.length, 1);
+
+  assert.throws(
+    () => removeWish(vault, 'wl_missing', { now: NOW }),
+    (err) => err instanceof GateError && err.status === 404
+  );
 });
