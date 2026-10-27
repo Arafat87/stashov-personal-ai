@@ -307,7 +307,7 @@ A **verdict** is the Gate's recommendation. A **status** is the clock. They are 
 
 The guardrail is advice attached to the protocol; the Gate does not automatically block a purchase from it.
 
-**Linked products / "Products in this rule"** — Wishlist items attached to the protocol. Their photos, brands, and verified prices appear on the protocol card; clicking one opens the Gate. Up to 5 are auto-matched from the paste; up to 12 can be stored.
+**Linked products / "Products in this rule"** — Wishlist items attached to the protocol. Their photos, brands, and verified prices appear on the protocol card; clicking one opens the Gate. The routine builder searches the whole wishlist by name, brand, category and tag, and the picker shows 60 results at a time with a **Show more** button. Ticked products stay ticked while you filter, and **Ticked only** reviews the selection before saving. Up to 5 are auto-matched from the paste; up to 12 can be stored, and the picker refuses a 13th tick.
 
 **Today's Playbook** — The Rules header card listing every protocol with a check-off for today's local date, a `done/total` score, and each protocol's current streak.
 

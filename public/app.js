@@ -83,6 +83,9 @@ const MODEL_META = {
   embedding: { tag: 'E', label: 'Semantic memory', tone: cssVar('--mint') }
 };
 
+const ROUTINE_PRODUCT_CAP = 12;
+const ROUTINE_PRODUCTS_PAGE = 60;
+
 const state = {
   vault: null,
   tab: 'deck',
@@ -107,6 +110,11 @@ const state = {
     selectMode: false, selected: [], duplicates: null, duplicateExtra: 0
   },
   routineLinkedIds: [],
+  routineSearch: '',
+  routineSelectedOnly: false,
+  routineLimit: ROUTINE_PRODUCTS_PAGE,
+  routineMatchCount: 0,
+  routineSearchTimer: null,
   auditId: null,
   promotion: null,
   clusterDialog: { name: '', mode: 'product', default_mode: 'product', hero_item_id: '', cover: '' },
@@ -2714,24 +2722,95 @@ function protocolById(id) {
   return ((state.vault && state.vault.protocols) || []).find((protocol) => protocol.id === id) || null;
 }
 
+function routineProductText(wish) {
+  const tags = Array.isArray(wish.tags) ? wish.tags : [];
+  return [wish.title, wish.brand, wish.category, wish.best_source, wish.dupe_alternative, ...tags]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function routineProductMatches(wish, words) {
+  const haystack = routineProductText(wish);
+  return words.every((word) => haystack.includes(word));
+}
+
+function clearRoutineProductSearch() {
+  state.routineSearch = '';
+  state.routineLimit = ROUTINE_PRODUCTS_PAGE;
+  if ($('#routineProductSearch')) $('#routineProductSearch').value = '';
+}
+
+function resetRoutineProductFilters() {
+  clearRoutineProductSearch();
+  state.routineSelectedOnly = false;
+  const toggle = $('#routineSelectedToggle');
+  if (toggle) {
+    toggle.classList.remove('is-active');
+    toggle.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function syncRoutineProductsFooter(total) {
+  state.routineMatchCount = total;
+  if ($('#routineProductsCount')) {
+    $('#routineProductsCount').textContent = `${(state.routineLinkedIds || []).length} / ${ROUTINE_PRODUCT_CAP} ticked`;
+  }
+  const clear = $('#routineProductSearchClear');
+  if (clear) clear.hidden = !state.routineSearch.trim();
+  const foot = $('#routineProductsFoot');
+  const meta = $('#routineProductsMeta');
+  const more = $('#routineProductsMore');
+  if (!foot || !meta || !more) return;
+  if (!total) {
+    foot.hidden = true;
+    return;
+  }
+  foot.hidden = false;
+  const query = state.routineSearch.trim();
+  const shown = state.routineSelectedOnly ? total : Math.min(state.routineLimit, total);
+  meta.textContent = `${shown} of ${total}${state.routineSelectedOnly ? ' ticked' : ' products'}${query ? ` · “${query}”` : ''}`;
+  more.hidden = state.routineSelectedOnly || state.routineLimit >= total;
+}
+
 function renderRoutineProducts() {
   const picker = $('#routineProducts');
   if (!picker) return;
   const wishes = ((state.vault && state.vault.wishlist) || []);
   const selected = new Set(state.routineLinkedIds || []);
-  if ($('#routineProductsCount')) {
-    $('#routineProductsCount').textContent = `${selected.size} linked`;
+  const query = state.routineSearch.trim();
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  let matches = wishes;
+  if (state.routineSelectedOnly) matches = matches.filter((wish) => selected.has(wish.id));
+  if (words.length) matches = matches.filter((wish) => routineProductMatches(wish, words));
+  if (!wishes.length) {
+    picker.innerHTML = '<p class="routine-products-empty">No wishlist products yet. Add one from the Gate first.</p>';
+    syncRoutineProductsFooter(0);
+    return;
   }
-  picker.innerHTML = wishes.length ? wishes.map((wish) => {
+  if (!matches.length) {
+    const message = state.routineSelectedOnly && !query
+      ? 'Nothing is ticked yet.'
+      : query
+        ? `No product matches “${esc(query)}”.`
+        : 'No product matches this filter.';
+    picker.innerHTML = `<p class="routine-products-empty">${message}<br><button class="btn ghost sm" type="button" data-routine-clear-search>Clear filters</button></p>`;
+    syncRoutineProductsFooter(0);
+    return;
+  }
+  const visible = state.routineSelectedOnly ? matches : matches.slice(0, state.routineLimit);
+  picker.innerHTML = visible.map((wish) => {
     const image = safeImage(wish.image);
     const initial = String(wish.title || '?').trim().charAt(0).toUpperCase() || '?';
     const isSelected = selected.has(wish.id);
-    return `<button type="button" class="routine-product ${isSelected ? 'is-selected' : ''}" data-routine-link="${esc(wish.id)}" aria-pressed="${isSelected}" title="${esc(wish.title)}">
+    const brand = wish.brand || 'PRIVATE SAVE';
+    return `<button type="button" class="routine-product ${isSelected ? 'is-selected' : ''}" data-routine-link="${esc(wish.id)}" aria-pressed="${isSelected}" title="${esc(wish.title)}${wish.brand ? ` · ${esc(wish.brand)}` : ''}">
       ${image ? `<img src="${esc(image)}" alt="" loading="lazy" />` : `<span class="routine-product-fallback" aria-hidden="true">${esc(initial)}</span>`}
-      <span class="routine-product-copy"><b>${esc(wish.title)}</b><small>${esc(wish.brand || 'PRIVATE SAVE')}</small></span>
+      <span class="routine-product-copy"><b>${esc(wish.title)}</b><small>${esc(brand)}</small></span>
       <span class="routine-product-check" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
     </button>`;
-  }).join('') : '<p class="routine-products-empty">No wishlist products yet. Add one from the Gate first.</p>';
+  }).join('');
+  syncRoutineProductsFooter(matches.length);
 }
 
 function openRoutineDialog(protocol) {
@@ -2750,6 +2829,7 @@ function openRoutineDialog(protocol) {
   if ($('#routineConflict')) $('#routineConflict').value = isEdit ? protocol.conflict_alert || '' : '';
   if ($('#routineSource')) $('#routineSource').value = isEdit ? protocol.source_platform || '' : 'Pasted routine (TikTok / YouTube / social)';
   if ($('#routineParseNote')) $('#routineParseNote').textContent = isEdit ? `Editing ${(protocol.steps || []).length} saved steps.` : 'Nothing parsed yet.';
+  resetRoutineProductFilters();
   renderRoutineProducts();
   const error = $('#routineError');
   if (error) error.hidden = true;
@@ -2779,6 +2859,7 @@ async function generateRoutine(btn) {
     if ($('#routineConflict')) $('#routineConflict').value = routine.conflict_alert || '';
     if ($('#routineSource')) $('#routineSource').value = routine.source_platform || 'Pasted routine (TikTok / YouTube / social)';
     if ($('#routineParseNote')) $('#routineParseNote').textContent = `Structured ${(routine.steps || []).length} steps · ${routine.schedule || 'as needed'}.`;
+    resetRoutineProductFilters();
     renderRoutineProducts();
     toast('Routine structured. Review the guardrail, then save.');
   } catch (err) {
@@ -4305,13 +4386,73 @@ function bindEvents() {
   const routineProducts = $('#routineProducts');
   if (routineProducts) {
     routineProducts.addEventListener('click', (event) => {
+      const clear = event.target.closest('[data-routine-clear-search]');
+      if (clear) {
+        resetRoutineProductFilters();
+        renderRoutineProducts();
+        if ($('#routineProductSearch')) $('#routineProductSearch').focus();
+        return;
+      }
       const btn = event.target.closest('[data-routine-link]');
       if (!btn) return;
       const id = btn.dataset.routineLink;
       const ids = new Set(state.routineLinkedIds || []);
-      if (ids.has(id)) ids.delete(id);
-      else ids.add(id);
+      const willSelect = !ids.has(id);
+      if (willSelect && ids.size >= ROUTINE_PRODUCT_CAP) {
+        toast(`A routine can link up to ${ROUTINE_PRODUCT_CAP} products. Untick one before adding another.`, 'warn');
+        return;
+      }
+      if (willSelect) ids.add(id);
+      else ids.delete(id);
       state.routineLinkedIds = Array.from(ids);
+      if (state.routineSelectedOnly) {
+        renderRoutineProducts();
+        return;
+      }
+      btn.classList.toggle('is-selected', willSelect);
+      btn.setAttribute('aria-pressed', String(willSelect));
+      syncRoutineProductsFooter(state.routineMatchCount || 0);
+    });
+  }
+  const routineSearch = $('#routineProductSearch');
+  if (routineSearch) {
+    routineSearch.addEventListener('input', () => {
+      state.routineSearch = routineSearch.value;
+      window.clearTimeout(state.routineSearchTimer);
+      state.routineSearchTimer = window.setTimeout(() => {
+        state.routineLimit = ROUTINE_PRODUCTS_PAGE;
+        renderRoutineProducts();
+      }, 120);
+    });
+    routineSearch.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !routineSearch.value) return;
+      event.stopPropagation();
+      clearRoutineProductSearch();
+      renderRoutineProducts();
+    });
+  }
+  const routineSearchClear = $('#routineProductSearchClear');
+  if (routineSearchClear) {
+    routineSearchClear.addEventListener('click', () => {
+      clearRoutineProductSearch();
+      renderRoutineProducts();
+      if (routineSearch) routineSearch.focus();
+    });
+  }
+  const routineSelectedToggle = $('#routineSelectedToggle');
+  if (routineSelectedToggle) {
+    routineSelectedToggle.addEventListener('click', () => {
+      state.routineSelectedOnly = !state.routineSelectedOnly;
+      routineSelectedToggle.classList.toggle('is-active', state.routineSelectedOnly);
+      routineSelectedToggle.setAttribute('aria-pressed', String(state.routineSelectedOnly));
+      state.routineLimit = ROUTINE_PRODUCTS_PAGE;
+      renderRoutineProducts();
+    });
+  }
+  const routineProductsMore = $('#routineProductsMore');
+  if (routineProductsMore) {
+    routineProductsMore.addEventListener('click', () => {
+      state.routineLimit += ROUTINE_PRODUCTS_PAGE;
       renderRoutineProducts();
     });
   }

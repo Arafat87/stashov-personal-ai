@@ -1074,7 +1074,7 @@
     {
       "term": "Linked products / \"Products in this rule\"",
       "category": "Rules vocabulary",
-      "definition": "Wishlist items attached to the protocol. Their photos, brands, and verified prices appear on the protocol card; clicking one opens the Gate. Up to 5 are auto-matched from the paste; up to 12 can be stored.",
+      "definition": "Wishlist items attached to the protocol. Their photos, brands, and verified prices appear on the protocol card; clicking one opens the Gate. The routine builder searches the whole wishlist by name, brand, category and tag, and the picker shows 60 results at a time with a Show more button. Ticked products stay ticked while you filter, and Ticked only reviews the selection before saving. Up to 5 are auto-matched from the paste; up to 12 can be stored, and the picker refuses a 13th tick.",
       "keywords": [
         "Linked products / \"Products in this rule\""
       ]

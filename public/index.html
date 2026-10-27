@@ -730,9 +730,21 @@
       </div>
       <div class="field"><label for="routineSteps">Steps (one per line)</label><textarea id="routineSteps" rows="8" placeholder="AM — Gentle cleanser&#10;AM — Azelaic acid 10%&#10;AM — SPF 50&#10;PM — Double cleanse&#10;PM — Adapalene 0.1%&#10;PM — Ceramide moisturizer"></textarea></div>
       <div class="field">
-        <div class="routine-products-head"><label>Products used</label><span id="routineProductsCount">0 linked</span></div>
+        <div class="routine-products-head"><label for="routineProductSearch">Products used</label><span id="routineProductsCount">0 / 12 ticked</span></div>
+        <div class="routine-products-tools">
+          <div class="routine-products-search">
+            <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <input type="search" id="routineProductSearch" autocomplete="off" placeholder="Search by name, brand, category or tag" aria-label="Search wishlist products" />
+            <button type="button" id="routineProductSearchClear" class="routine-search-clear" aria-label="Clear product search" hidden><svg class="icon"><use href="#i-x"/></svg></button>
+          </div>
+          <button type="button" class="filter-chip" id="routineSelectedToggle" aria-pressed="false">Ticked only</button>
+        </div>
         <div class="routine-products" id="routineProducts" role="group" aria-label="Link wishlist products to this routine"></div>
-        <p class="field-note">Pick the exact products this rule uses. Their photos appear on the saved protocol; products named in the paste are linked automatically.</p>
+        <div class="routine-products-foot" id="routineProductsFoot" hidden>
+          <span class="micro" id="routineProductsMeta"></span>
+          <button class="btn ghost sm" type="button" id="routineProductsMore" hidden>Show more</button>
+        </div>
+        <p class="field-note">Tick the exact products this rule uses. Search scans the whole wishlist, ticked items stay ticked while you filter, and a routine stores up to 12 links.</p>
       </div>
       <div class="field"><label for="routineConflict">Conflict guardrail</label><textarea id="routineConflict" rows="3" maxlength="500" placeholder="What should the gate check before this routine is used?" ></textarea></div>
       <div class="field"><label for="routineSource">Source / where you found it</label><input type="text" id="routineSource" maxlength="160" autocomplete="off" placeholder="TikTok, YouTube, dermatologist, product label…" /></div>
