@@ -2188,7 +2188,7 @@ function wishCard(w, originalIndex, renderIndex) {
   <article class="wish ${tone} ${archived ? 'is-archived' : ''}" data-wish-id="${esc(w.id)}" tabindex="-1" style="--i:${Math.min(renderIndex, 9)}">
     <div class="wish-media">
       <span class="media-fallback" aria-hidden="true"><strong>${esc(initial)}</strong><span>Photo pending</span></span>
-      ${image ? `<img src="${esc(image)}" alt="${esc(w.title)}" loading="lazy" />` : ''}
+      ${image ? `<img class="wish-media-bleed" src="${esc(image)}" alt="" aria-hidden="true" loading="lazy" decoding="async" /><img class="wish-media-shot" src="${esc(image)}" alt="${esc(w.title)}" loading="lazy" decoding="async" />` : ''}
       <button type="button" class="wish-photo-btn" data-wish-photo="${esc(w.id)}" aria-label="${image ? 'Change' : 'Find'} photo for ${esc(w.title)}"><svg class="icon"><use href="#i-image"/></svg><span>${image ? 'Change photo' : 'Find photo'}</span></button>
     </div>
     <div class="wish-top">
@@ -3126,17 +3126,30 @@ function glossaryMatches(entry, words) {
   return words.every((word) => hay.includes(word));
 }
 
+/**
+ * The rail only dims the edges it can actually scroll towards, so the first
+ * chip is never faded at rest and the last one never fades when you reach it.
+ */
+function syncHelpCategoryEdges() {
+  const row = $('#helpCategories');
+  if (!row) return;
+  const max = row.scrollWidth - row.clientWidth;
+  row.classList.toggle('has-left', row.scrollLeft > 2);
+  row.classList.toggle('has-right', max > 2 && row.scrollLeft < max - 2);
+}
+
 function renderHelpCategories() {
   const host = $('#helpCategories');
   if (!host) return;
   const terms = state.help.entries || [];
-  if (!terms.length) { host.innerHTML = ''; return; }
+  if (!terms.length) { host.innerHTML = ''; syncHelpCategoryEdges(); return; }
   const counts = new Map();
   terms.forEach((entry) => counts.set(entry.category, (counts.get(entry.category) || 0) + 1));
   const chips = [['ALL', 'All terms', terms.length], ...Array.from(counts.entries()).map(([category, count]) => [category, category, count])];
   host.innerHTML = chips.map(([value, label, count]) => `
     <button type="button" class="help-cat-chip ${state.help.category === value ? 'is-active' : ''}" data-help-category="${esc(value)}" aria-pressed="${state.help.category === value}">${esc(label)} <b>${count}</b></button>
   `).join('');
+  syncHelpCategoryEdges();
 }
 
 /**
@@ -3159,6 +3172,7 @@ function revealHelpCategory() {
   const viewRight = row.scrollLeft + row.clientWidth - edge;
   if (left >= viewLeft && right <= viewRight) return;
   row.scrollLeft = Math.max(0, left - (row.clientWidth - chipRect.width) / 2);
+  syncHelpCategoryEdges();
 }
 
 function renderHelp() {
@@ -4830,6 +4844,7 @@ function bindEvents() {
       renderHelp();
       revealHelpCategory();
     });
+    helpCategories.addEventListener('scroll', syncHelpCategoryEdges, { passive: true });
     // A vertical wheel over the rail should move it sideways; the container
     // never scrolls vertically, so nothing else competes for the gesture.
     helpCategories.addEventListener('wheel', (event) => {

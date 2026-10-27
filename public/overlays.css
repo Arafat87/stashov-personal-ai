@@ -385,8 +385,7 @@ dialog::backdrop { background: rgba(2, 4, 7, 0.74); backdrop-filter: blur(9px); 
 .help-search input::placeholder { color: var(--placeholder); }
 .help-count { flex: none; font: 500 9.5px/1.4 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
 /* The category strip is a single horizontal rail. `flex: none` keeps the row at
-   its full height instead of letting the scrolling body above squash it, and
-   the mask fades the edges so the overflow reads as scrollable. */
+   its full height instead of letting the scrolling body above squash it. */
 .help-categories {
   display: flex;
   flex: none;
@@ -398,11 +397,14 @@ dialog::backdrop { background: rgba(2, 4, 7, 0.74); backdrop-filter: blur(9px); 
   overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
+/* The edge fades follow the scroll position: no fade at the start, a left fade
+   once the rail has moved, and the right fade retires at the end. */
+.help-categories.has-left { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px); mask-image: linear-gradient(90deg, transparent 0, #000 18px); }
+.help-categories.has-right { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent 100%); }
+.help-categories.has-left.has-right { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }
 .help-categories::-webkit-scrollbar { height: 6px; }
 .help-categories::-webkit-scrollbar-track { background: transparent; }
 .help-categories::-webkit-scrollbar-thumb { border-radius: 99px; background: rgba(255, 255, 255, 0.16); }
