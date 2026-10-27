@@ -9,6 +9,7 @@
     "sync-bookmarks": "node scripts/sync-bookmarks.js",
     "audit-library": "node scripts/audit-library.js",
     "generate-cluster-cards": "node scripts/generate-cluster-cards.js",
+    "build-glossary": "node scripts/build-glossary.js",
     "worker": "node jobs/nebius-serverless-worker.js",
     "archil-check": "node scripts/archil-persist-check.js",
     "test": "node --test tests/*.test.js"

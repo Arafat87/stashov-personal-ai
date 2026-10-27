@@ -16,6 +16,7 @@ const { getClusterMetaMap, replaceStore, updateClusterMeta } = require('./lib/cl
 const { SECTIONS: LIBRARY_SECTIONS, librarySectionFor, librarySectionsWithCounts, findLibraryDuplicates, sectionById: librarySectionById } = require('./lib/library');
 const { parseRoutine } = require('./lib/routine');
 const { checkRoutine, createProtocol, updateProtocol, deleteProtocol } = require('./lib/protocols');
+const { ProfileError, updatePersonalContext } = require('./lib/profile');
 const {
   ensureGateState,
   budgetSummary,
@@ -598,6 +599,24 @@ async function handleRequest(req, res) {
         cluster_meta: getClusterMetaMap(Object.keys(catCounts)),
         total_bookmarks: (vault.bookmarks || []).length,
       });
+    }
+
+    // 1a. PATCH /api/context — update the You profile. Budget and cooling
+    // fields are deliberately not editable from this route.
+    if (req.method === 'PATCH' && pathname === '/api/context') {
+      if (!rateLimit(req, 'profile-update', 20, 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Profile edits are limited to 20 per minute.' }, { 'Retry-After': '60' });
+      }
+      const body = await parseBody(req);
+      const vault = loadVault();
+      try {
+        const context = updatePersonalContext(vault, body);
+        await saveVault(vault);
+        return sendJson(res, 200, { ok: true, personal_context: context });
+      } catch (err) {
+        if (err instanceof ProfileError) return sendJson(res, err.status || 400, { error: err.message });
+        throw err;
+      }
     }
 
     // 2. GET /api/bookmarks — paginated & filtered bookmarks + hybrid semantic search

@@ -77,6 +77,7 @@
 <div class="budget-mini"><span>FUN-MONEY</span><strong id="topBudget">$—</strong></div>
         <span class="clock" id="clock">--:--:--</span>
         <button class="palette-btn" id="customizeBtn" aria-label="Customize sidebar sections" aria-haspopup="dialog" aria-controls="sectionsDialog"><svg class="icon"><use href="#i-edit"/></svg><span>Customize</span></button>
+        <button class="palette-btn" id="helpBtn" aria-label="Open help and glossary" aria-haspopup="dialog" aria-controls="helpDialog"><svg class="icon"><use href="#i-book"/></svg><span>Help</span><kbd>?</kbd></button>
         <button class="palette-btn" id="paletteBtn" aria-label="Open command palette" aria-haspopup="dialog" aria-controls="paletteDialog"><svg class="icon"><use href="#i-command"/></svg><span>Command</span><kbd id="paletteKbd">Ctrl K</kbd></button>
 </div>
 </header>
@@ -340,6 +341,7 @@
       <h2>The AI that knows<br><em>you.</em></h2>
       <p class="lede">Your sizes, your closet, your skin barrier, your budget, your scent profile. Stored in your own vault, used only to make the gate smarter.</p>
     </div>
+    <div class="head-actions"><button class="btn ghost" type="button" id="editProfileBtn"><svg class="icon"><use href="#i-edit"/></svg> Edit profile</button></div>
   </div>
   <div class="context-grid">
     <article class="profile-card glass reveal">
@@ -363,18 +365,6 @@
       <div class="inventory-list" id="inventoryList"></div>
     </article>
 
-    <article class="data-card glass reveal" aria-labelledby="dataTitle">
-      <header class="panel-head"><span class="micro">DATA &amp; BACKUPS</span><span class="badge-soft">LOCAL</span></header>
-      <h3 id="dataTitle">Take it with you.</h3>
-      <p>Export a complete copy of the vault, sections and cluster covers. Restoring writes a timestamped snapshot first, so a bad import is recoverable.</p>
-      <div class="data-actions">
-        <a class="btn ghost sm" href="/api/export" download><svg class="icon" aria-hidden="true"><use href="#i-down"/></svg> Export vault</a>
-        <button class="btn ghost sm" type="button" id="importBtn"><svg class="icon" aria-hidden="true"><use href="#i-up"/></svg> Restore backup</button>
-        <input type="file" id="importFile" accept="application/json,.json" aria-label="Choose a Stashov vault backup to restore" hidden />
-      </div>
-      <p class="data-status" id="dataStatus" role="status" aria-live="polite">Snapshots are kept in <code>data/backups</code>.</p>
-    </article>
-
     <article class="scent-card glass reveal">
       <header class="panel-head"><span class="micro">SCENT PROFILE</span><span class="badge-soft">MEMORY</span></header>
       <h3>Loved notes</h3>
@@ -382,6 +372,18 @@
       <h3 class="note-avoid-title">Avoid</h3>
       <div class="note-chips avoid" id="avoidNotes"></div>
       <div class="privacy-note"><svg class="icon"><use href="#i-lock"/></svg><span>Stored in your local vault. No ad profiles, no resale, no cloud memory you do not control.</span></div>
+    </article>
+
+    <article class="data-card glass reveal" aria-labelledby="dataTitle">
+      <header class="panel-head"><span class="micro">DATA &amp; BACKUPS</span><span class="badge-soft">PORTABLE</span></header>
+      <h3 id="dataTitle">Take it with you.</h3>
+      <p>Export the complete vault — bookmarks, wishes, routines, your You profile, shelf sections and cluster covers. Restore replaces the vault; export first if you want a copy.</p>
+      <div class="data-actions">
+        <a class="btn ghost sm" href="/api/export" download><svg class="icon" aria-hidden="true"><use href="#i-down"/></svg> Export vault</a>
+        <button class="btn ghost sm" type="button" id="importBtn"><svg class="icon" aria-hidden="true"><use href="#i-up"/></svg> Restore backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" aria-label="Choose a Stashov vault backup to restore" hidden />
+      </div>
+      <p class="data-status" id="dataStatus" role="status" aria-live="polite">Restoring replaces every room, including You. Local installs also keep a timestamped copy in <code>data/backups</code>.</p>
     </article>
   </div>
 </section>
@@ -954,6 +956,77 @@
         <button class="btn danger" type="submit" id="voidSubmit"><svg class="icon"><use href="#i-x"/></svg> Void entry</button>
       </div>
     </form>
+  </div>
+</dialog>
+
+<dialog id="profileDialog" class="profile-dialog" aria-labelledby="profileTitle">
+  <div class="profile-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">IDENTITY BUFFER</p>
+        <h2 id="profileTitle">Edit profile</h2>
+        <p class="settings-sub">Name, sizing, hard constraints, owned inventory and scent notes. These values stay in your vault and are read by the Gate and the oracle.</p>
+      </div>
+      <button class="icon-btn" type="button" id="profileClose" aria-label="Close profile editor"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <form id="profileForm" class="gate-form profile-form" novalidate>
+      <div class="form-row">
+        <div class="field"><label for="profileOwnerInput">Name</label><input type="text" id="profileOwnerInput" maxlength="80" autocomplete="name" placeholder="Your name" required /></div>
+        <div class="field"><label for="profileLocationInput">Location</label><input type="text" id="profileLocationInput" maxlength="120" autocomplete="address-level2" placeholder="City, region" /></div>
+      </div>
+      <section class="profile-section" aria-labelledby="profileSizingTitle">
+        <div class="profile-section-head">
+          <div><h3 id="profileSizingTitle">Sizing</h3><p>Short labels the Gate can understand. Leave a row blank to drop it.</p></div>
+          <button class="btn ghost sm" type="button" id="profileAddSize"><svg class="icon"><use href="#i-plus"/></svg> Add size</button>
+        </div>
+        <div id="profileSizeEditor" class="profile-size-editor"></div>
+      </section>
+      <div class="field">
+        <label for="profileConstraintsInput">Hard constraints</label>
+        <textarea id="profileConstraintsInput" rows="5" maxlength="12000" placeholder="One constraint per line"></textarea>
+        <p class="field-note">One per line. The Gate and oracle read these; they inform the verdict but do not automatically block a purchase.</p>
+      </div>
+      <section class="profile-section" aria-labelledby="profileInventoryTitle">
+        <div class="profile-section-head">
+          <div><h3 id="profileInventoryTitle">Owned inventory</h3><p>Items already in rotation. These power the Owned check on every wish.</p></div>
+          <button class="btn ghost sm" type="button" id="profileAddInventory"><svg class="icon"><use href="#i-plus"/></svg> Add item</button>
+        </div>
+        <div id="profileInventoryEditor" class="profile-inventory-editor"></div>
+      </section>
+      <div class="form-row">
+        <div class="field"><label for="profileLovedNotes">Loved scent notes</label><textarea id="profileLovedNotes" rows="3" placeholder="Oud&#10;Amber&#10;Cedarwood"></textarea></div>
+        <div class="field"><label for="profileAvoidNotes">Avoid scent notes</label><textarea id="profileAvoidNotes" rows="3" placeholder="Synthetic vanilla&#10;Powdery iris"></textarea></div>
+      </div>
+      <p class="field-note">One note per line. Month cap and category caps stay in Gate → Spend ledger.</p>
+      <p class="form-error" id="profileError" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button class="btn ghost sm" type="button" id="profileCancel">Cancel</button>
+        <button class="btn" type="submit" id="profileSaveBtn"><svg class="icon"><use href="#i-check"/></svg> Save profile</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle">
+  <div class="help-shell">
+    <header class="settings-head">
+      <div>
+        <p class="eyebrow">HELP / GLOSSARY</p>
+        <h2 id="helpTitle">What does that mean?</h2>
+        <p class="settings-sub">The language of Stashov: rooms, gate statuses, verdicts, prices, shelves, guardrails and data terms.</p>
+      </div>
+      <button class="icon-btn" type="button" id="helpClose" aria-label="Close help"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="help-toolbar">
+      <div class="help-search">
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" id="helpSearch" autocomplete="off" placeholder="Search terms — 'cooling', 'blocked', 'ledger'…" aria-label="Search glossary terms" />
+      </div>
+      <span class="help-count" id="helpCount" aria-live="polite">Loading…</span>
+    </div>
+    <div class="help-categories" id="helpCategories" role="group" aria-label="Glossary categories"></div>
+    <div class="help-body" id="helpBody"></div>
+    <footer class="help-foot"><span>Stashov glossary</span><span><kbd>?</kbd> to open</span></footer>
   </div>
 </dialog>
 

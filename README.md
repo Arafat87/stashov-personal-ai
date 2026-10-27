@@ -46,12 +46,13 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
    - **Pre-gate review with real prices (`lib/product-info.js`, `lib/promotion.js`):** A bookmark now opens a review dialog before it enters the Gate. Stashov reads the product page's JSON-LD or OpenGraph metadata for title, brand, currency, price, and image, and shows exactly what it found. Nothing is gated until you confirm, so a wrong title or price can be corrected first. The card labels the source as **captured**, **manual**, or **missing**, and every field stays editable from the Details dialog. Missing prices never become fake `$95` placeholders.
    - **Paste-a-link quick add:** the Gate accepts a raw product URL, with a **Paste** button that reads the link from the clipboard, so a product found in a video, chat, or social feed can go from link to reviewed wishlist item without hunting through 1,346 bookmarks. The command palette also jumps straight to this field.
    - **One-click capture bookmarklet (`#captureDialog`):** open **Capture anywhere** in the Gate, drag **Add to Stashov** to the bookmarks bar, then click it on any product page. The bookmarklet reads the page’s JSON-LD/OpenGraph title, brand, price, currency, and image directly in the browser, then opens `/?capture=<page-url>` with that snapshot. When structured metadata is absent, it can read a visible price from the product area and explicitly marks it **low confidence** in the review, Gate card, and saved price note. That fallback prefers the current sale price over a struck compare-at price, follows the selected variant when variants show their own prices, and refuses ranges, "from" prices, installment copy, shipping thresholds, and per-unit prices instead of guessing. This keeps the review working on stores that return 403 to server-side requests. If the page exposes no metadata or visible price, the server-side reader remains the fallback. The dialog also provides copyable bookmarklet code and a mobile fallback note. The capture URL is consumed once so refreshes do not repeat the review.
-   - **Monthly Fun-Money Ledger with editable caps:** Every Bought action writes one auditable ledger entry. The month's spend, remaining budget, and over-budget state are derived from that ledger, so the cap rolls over automatically on the 1st. The cap and optional per-category caps are editable from the ledger, which also shows a category breakdown and month-by-month history.
+   - **Monthly Fun-Money Ledger with editable caps:** Every Bought action writes one auditable ledger entry. The month's spend, remaining budget, and over-budget state are derived from that ledger, so the month resets automatically on the 1st. The cap and optional per-category caps are editable from the ledger, which also shows a category breakdown and month-by-month history.
    - **Discounter & Chemical/Spec Dupe Finder:** Cross-links retail product saves against your own bookmarked discounters (`Olfactory Factory LLC`, `FragranceNet`, `Quince`, `Thursday Factory Seconds`).
    - **14-Day Cooling-Off State Machine (`lib/gate.js`):** New saves get `added_at`, `unlock_at`, and a real lifecycle (`cooling → ready → bought/skipped/snoozed`). Every countdown is derived from timestamps, not seed text. **Snooze** pushes the decision out 7/14/30 days, **Skip** archives without spending, and **Buy** is rejected until the gate clears. An archived wish can be **reopened**, and a mistaken ledger entry can be **voided** while staying in the data file for audit.
    - **Price history, targets and re-checks:** every capture, manual edit, and **Check price** action appends a timestamped observation to the wish. Gate cards show a sparkline, lowest-seen price, observation count, and last-checked time. Set an optional target price in Details; the Gate flags the wish when the observed price meets it. Re-checking is rate limited and uses the same SSRF-safe reader as promotion.
    - **Duplicate warning before the clock starts:** the review dialog compares the incoming title against active wishes and surfaces likely duplicates (with the matching price and same-store hint) before you start a new 14-day gate.
-   - **Export, restore and automatic snapshots:** download the whole vault, sections, and cluster covers from You → Data & Backups. Restoring validates the file, writes a `pre-*` snapshot first, then replaces the vault. Local writes are atomic, keep the previous file as `.bak`, and rotate timestamped snapshots in `data/backups` (last 20).
+   - **Editable You profile (`lib/profile.js`):** **You → Edit profile** changes your name, location, sizing, hard constraints, owned inventory and scent notes without touching JSON. The server validates every field, protects budget/cooling fields, preserves inventory IDs, and writes the vault atomically. The Gate and oracle read the updated context immediately.
+   - **Export, restore and automatic snapshots:** download the whole vault, sections, and cluster covers from You → Data & Backups. Restoring validates the file, writes a `pre-*` snapshot when local storage allows, then replaces the vault. Local writes are atomic, keep the previous file as `.bak`, and rotate timestamped snapshots in `data/backups` (last 20).
 3. **Living Playbooks, Routine Builder & Conflict Detector:**
    - Converts static life-hack bookmarks into structured Morning/Evening protocols (Clear Skin AM/PM Split, Crash-Free Energy Stack, Fragrance Layering & Discounter Rules, Research Peptide COA Safety Checklist).
    - **Paste-to-routine builder:** paste a TikTok/YouTube caption or product list into Rules, generate AM/PM steps, review the guardrail, then save, edit, or delete the protocol.
@@ -64,6 +65,14 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
    - The app also persists the active tab, Gate lane, Library section/status/search, and Vault cluster in the URL hash, so refresh and Back preserve the view.
 5. **2-Second Ingest Studio & Transparent Router Telemetry:**
    - Ingests URLs, camera-roll screenshots, or notes and logs live model routing latency, token usage, and cost in the **Nebius Token Factory Telemetry Console**.
+
+---
+
+## Vocabulary
+
+Every room, status, verdict, price label, shelf, guardrail, and data term is defined in **[docs/GLOSSARY.md](docs/GLOSSARY.md)**. It starts with the pairs that are easiest to confuse: Active vs Cooling, Ready vs "gate cleared", Blocked vs Locked vs Bot-blocked, and verdict vs status.
+
+The same definitions are searchable inside the app from **Help** in the top bar or the **?** shortcut. `public/glossary.json` is generated from the markdown with `npm run build-glossary`, so the written and in-app glossaries stay in sync.
 
 ---
 
@@ -169,6 +178,8 @@ stashov-personal-ai/
 ├── .env.example                 # Environment template
 ├── LICENSE                      # Apache 2.0
 ├── README.md                    # This file
+├── docs/
+│   └── GLOSSARY.md              # Plain-language definitions for every Stashov term
 ├── scripts/
 │   ├── sync-bookmarks.js        # Chrome/Brave/Edge bookmark importer + 14-category classifier
 │   ├── audit-library.js         # Reference-link checker + description extractor

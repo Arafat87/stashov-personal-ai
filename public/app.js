@@ -112,7 +112,8 @@ const state = {
   clusterDialog: { name: '', mode: 'product', default_mode: 'product', hero_item_id: '', cover: '' },
   firstRender: true,
   paletteIndex: 0,
-  paletteFiltered: []
+  paletteFiltered: [],
+  help: { loaded: false, loading: false, error: '', entries: [], q: '', category: 'ALL' }
 };
 
 async function getJSON(url, options) {
@@ -2860,6 +2861,261 @@ async function toggleRoutineToday(id, done, btn) {
   }
 }
 
+/* ————— PROFILE EDITOR ————— */
+function profileContext() {
+  return (state.vault && state.vault.personal_context) || {};
+}
+
+function profileSizeRow(key = '', value = '') {
+  return `<div class="profile-size-row" data-profile-size>
+    <div class="field"><label>Label</label><input type="text" data-size-key maxlength="40" autocomplete="off" placeholder="e.g. tops" value="${esc(key)}" /></div>
+    <div class="field"><label>Value</label><input type="text" data-size-value maxlength="80" autocomplete="off" placeholder="e.g. L" value="${esc(value)}" /></div>
+    <button class="mini-btn danger" type="button" data-size-remove aria-label="Remove size"><svg class="icon"><use href="#i-trash"/></svg></button>
+  </div>`;
+}
+
+function profileInventoryRow(item = {}, index = 0) {
+  const data = item && typeof item === 'object' ? item : {};
+  return `<div class="profile-inventory-row" data-profile-inventory data-category="${esc(data.category || 'Uncategorized')}">
+    <input type="hidden" data-inventory-id value="${esc(data.id || '')}" />
+    <div class="profile-inventory-head"><span class="micro">ITEM ${pad(index + 1)}</span><button class="mini-btn danger" type="button" data-inventory-remove aria-label="Remove owned item"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+    <div class="profile-inventory-grid">
+      <div class="field"><label>Item</label><input type="text" data-inventory-name maxlength="140" autocomplete="off" placeholder="e.g. Black quilted parka" value="${esc(data.name || '')}" /></div>
+      <div class="field"><label>Brand</label><input type="text" data-inventory-brand maxlength="100" autocomplete="off" placeholder="e.g. Tokyo Laundry" value="${esc(data.brand || '')}" /></div>
+      <div class="field"><label>Status</label><input type="text" data-inventory-status maxlength="60" autocomplete="off" placeholder="e.g. Active in closet" value="${esc(data.status || 'Owned')}" /></div>
+      <div class="field profile-inventory-notes"><label>Notes</label><textarea data-inventory-notes rows="2" maxlength="300" placeholder="What it covers, why it blocks a duplicate…">${esc(data.notes || '')}</textarea></div>
+    </div>
+  </div>`;
+}
+
+function profileEmpty(host, message) {
+  if (host) host.innerHTML = `<p class="profile-empty">${esc(message)}</p>`;
+}
+
+function reindexProfileInventory() {
+  $$('#profileInventoryEditor [data-profile-inventory]').forEach((row, index) => {
+    const label = row.querySelector('.profile-inventory-head .micro');
+    if (label) label.textContent = `ITEM ${pad(index + 1)}`;
+  });
+}
+
+function renderProfileSizes(sizes) {
+  const host = $('#profileSizeEditor');
+  if (!host) return;
+  const entries = sizes && typeof sizes === 'object' && !Array.isArray(sizes) ? Object.entries(sizes) : [];
+  if (!entries.length) {
+    profileEmpty(host, 'No sizes recorded. Add the labels the Gate should check against.');
+    return;
+  }
+  host.innerHTML = entries.map(([key, value]) => profileSizeRow(key, value)).join('');
+}
+
+function renderProfileInventory(items) {
+  const host = $('#profileInventoryEditor');
+  if (!host) return;
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
+    profileEmpty(host, 'No owned items tracked. Add what is already in rotation so the Gate can spot duplicates.');
+    return;
+  }
+  host.innerHTML = list.map((item, index) => profileInventoryRow(item, index)).join('');
+}
+
+function renderProfileEditor() {
+  const ctx = profileContext();
+  if ($('#profileOwnerInput')) $('#profileOwnerInput').value = String(ctx.owner || '');
+  if ($('#profileLocationInput')) $('#profileLocationInput').value = String(ctx.location || '');
+  if ($('#profileConstraintsInput')) {
+    $('#profileConstraintsInput').value = (Array.isArray(ctx.skin_and_health_constraints) ? ctx.skin_and_health_constraints : []).join('\n');
+  }
+  const fragrance = ctx.fragrance_profile && typeof ctx.fragrance_profile === 'object' ? ctx.fragrance_profile : {};
+  if ($('#profileLovedNotes')) $('#profileLovedNotes').value = (Array.isArray(fragrance.loved_notes) ? fragrance.loved_notes : []).join('\n');
+  if ($('#profileAvoidNotes')) $('#profileAvoidNotes').value = (Array.isArray(fragrance.avoid_notes) ? fragrance.avoid_notes : []).join('\n');
+  renderProfileSizes(ctx.sizes);
+  renderProfileInventory(ctx.owned_inventory);
+  const error = $('#profileError');
+  if (error) { error.hidden = true; error.textContent = ''; }
+  const form = $('#profileForm');
+  if (form) form.scrollTop = 0;
+}
+
+function openProfileDialog() {
+  if (!state.vault) { toast('The vault is not loaded yet.', 'warn'); return; }
+  renderProfileEditor();
+  const dialog = $('#profileDialog');
+  if (dialog && !dialog.open) dialog.showModal();
+  window.setTimeout(() => { const input = $('#profileOwnerInput'); if (input) input.focus(); }, 60);
+}
+
+function profileLines(value) {
+  return String(value || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function profileError(message) {
+  const error = $('#profileError');
+  if (error) {
+    error.hidden = false;
+    error.textContent = message;
+  }
+  toast(message, 'err');
+}
+
+function collectProfilePayload() {
+  const owner = $('#profileOwnerInput') ? $('#profileOwnerInput').value.trim() : '';
+  if (!owner) throw new Error('Add your name before saving the profile.');
+  const location = $('#profileLocationInput') ? $('#profileLocationInput').value.trim() : '';
+
+  const sizes = {};
+  $$('#profileSizeEditor [data-profile-size]').forEach((row) => {
+    const key = row.querySelector('[data-size-key]') ? row.querySelector('[data-size-key]').value.trim() : '';
+    const value = row.querySelector('[data-size-value]') ? row.querySelector('[data-size-value]').value.trim() : '';
+    if (!key && !value) return;
+    if (!key || !value) throw new Error('Each size row needs both a label and a value.');
+    if (Object.prototype.hasOwnProperty.call(sizes, key)) throw new Error(`The size "${key}" is listed twice.`);
+    sizes[key] = value;
+  });
+  if (Object.keys(sizes).length > 12) throw new Error('Keep sizing to 12 entries or fewer.');
+
+  const constraints = profileLines($('#profileConstraintsInput') ? $('#profileConstraintsInput').value : '');
+  if (constraints.length > 20) throw new Error('Keep hard constraints to 20 lines or fewer.');
+
+  const inventory = [];
+  $$('#profileInventoryEditor [data-profile-inventory]').forEach((row) => {
+    const name = row.querySelector('[data-inventory-name]') ? row.querySelector('[data-inventory-name]').value.trim() : '';
+    const brand = row.querySelector('[data-inventory-brand]') ? row.querySelector('[data-inventory-brand]').value.trim() : '';
+    const status = row.querySelector('[data-inventory-status]') ? row.querySelector('[data-inventory-status]').value.trim() : '';
+    const notes = row.querySelector('[data-inventory-notes]') ? row.querySelector('[data-inventory-notes]').value.trim() : '';
+    const id = row.querySelector('[data-inventory-id]') ? row.querySelector('[data-inventory-id]').value.trim() : '';
+    if (!name && !brand && !notes && !id) return;
+    if (!name) throw new Error('Every owned item needs a name.');
+    inventory.push({
+      id,
+      name,
+      brand,
+      status,
+      notes,
+      category: row.dataset.category || 'Uncategorized'
+    });
+  });
+  if (inventory.length > 30) throw new Error('Keep owned inventory to 30 items or fewer.');
+
+  const loved = profileLines($('#profileLovedNotes') ? $('#profileLovedNotes').value : '');
+  const avoid = profileLines($('#profileAvoidNotes') ? $('#profileAvoidNotes').value : '');
+  if (loved.length > 20 || avoid.length > 20) throw new Error('Keep each scent list to 20 notes or fewer.');
+
+  return {
+    owner,
+    location,
+    sizes,
+    skin_and_health_constraints: constraints,
+    owned_inventory: inventory,
+    fragrance_profile: { loved_notes: loved, avoid_notes: avoid }
+  };
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+  const error = $('#profileError');
+  if (error) { error.hidden = true; error.textContent = ''; }
+  const btn = $('#profileSaveBtn');
+  let payload;
+  try {
+    payload = collectProfilePayload();
+  } catch (err) {
+    profileError(err.message);
+    return;
+  }
+  busy(btn, true, 'Saving');
+  try {
+    await patchJSON('/api/context', payload);
+    const dialog = $('#profileDialog');
+    if (dialog && dialog.open) dialog.close();
+    await refreshVault();
+    toast('Profile saved. The Gate will use these details on its next check.');
+  } catch (err) {
+    profileError(err.message);
+  } finally {
+    busy(btn, false);
+  }
+}
+
+/* ————— HELP / GLOSSARY ————— */
+function glossaryMatches(entry, words) {
+  const hay = `${entry.term || ''} ${entry.category || ''} ${entry.definition || ''} ${(entry.keywords || []).join(' ')}`.toLowerCase();
+  return words.every((word) => hay.includes(word));
+}
+
+function renderHelpCategories() {
+  const host = $('#helpCategories');
+  if (!host) return;
+  const terms = state.help.entries || [];
+  if (!terms.length) { host.innerHTML = ''; return; }
+  const counts = new Map();
+  terms.forEach((entry) => counts.set(entry.category, (counts.get(entry.category) || 0) + 1));
+  const chips = [['ALL', 'All terms', terms.length], ...Array.from(counts.entries()).map(([category, count]) => [category, category, count])];
+  host.innerHTML = chips.map(([value, label, count]) => `
+    <button type="button" class="help-cat-chip ${state.help.category === value ? 'is-active' : ''}" data-help-category="${esc(value)}" aria-pressed="${state.help.category === value}">${esc(label)} <b>${count}</b></button>
+  `).join('');
+}
+
+function renderHelp() {
+  const body = $('#helpBody');
+  const count = $('#helpCount');
+  if (!body) return;
+  if (state.help.loading) {
+    if (count) count.textContent = 'Loading…';
+    body.innerHTML = '<p class="help-empty">Loading the glossary…</p>';
+    return;
+  }
+  if (state.help.error) {
+    if (count) count.textContent = 'Unavailable';
+    body.innerHTML = `<p class="help-empty">${esc(state.help.error)}<br><button class="btn ghost sm" type="button" data-help-retry>Try again</button></p>`;
+    return;
+  }
+  const words = state.help.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const filtered = (state.help.entries || []).filter((entry) => {
+    if (state.help.category !== 'ALL' && entry.category !== state.help.category) return false;
+    return !words.length || glossaryMatches(entry, words);
+  });
+  if (count) count.textContent = `${filtered.length} of ${(state.help.entries || []).length} terms`;
+  renderHelpCategories();
+  if (!filtered.length) {
+    body.innerHTML = `<p class="help-empty">No term matches that filter.<br><button class="btn ghost sm" type="button" data-help-clear>Clear search</button></p>`;
+    return;
+  }
+  body.innerHTML = filtered.map((entry) => `
+    <article class="help-entry">
+      <header><h3>${esc(entry.term)}</h3><span class="micro">${esc(entry.category)}</span></header>
+      <p>${esc(entry.definition)}</p>
+    </article>
+  `).join('');
+}
+
+async function loadGlossary() {
+  if (state.help.loading) return;
+  state.help.loading = true;
+  state.help.error = '';
+  renderHelp();
+  try {
+    const data = await getJSON('/glossary.json');
+    state.help.entries = Array.isArray(data.terms) ? data.terms : [];
+    state.help.loaded = true;
+  } catch (err) {
+    state.help.error = `The glossary could not be loaded. ${err.message}`;
+  } finally {
+    state.help.loading = false;
+    renderHelp();
+  }
+}
+
+function openHelp() {
+  const dialog = $('#helpDialog');
+  if (dialog && !dialog.open) dialog.showModal();
+  if (!state.help.loaded && !state.help.loading) loadGlossary();
+  else renderHelp();
+  window.setTimeout(() => { const input = $('#helpSearch'); if (input) input.focus(); }, 60);
+}
+
 /* ————— CONTEXT ————— */
 function renderContextView(v) {
   const ctx = v.personal_context || {};
@@ -4327,6 +4583,111 @@ function bindEvents() {
   if (jobBtn) jobBtn.addEventListener('click', () => runServerlessJob(jobBtn));
   const deckJobBtn = $('#deckJobBtn');
   if (deckJobBtn) deckJobBtn.addEventListener('click', () => runServerlessJob(deckJobBtn));
+
+  const profileBtn = $('#editProfileBtn');
+  if (profileBtn) profileBtn.addEventListener('click', openProfileDialog);
+  const profileClose = $('#profileClose');
+  if (profileClose) profileClose.addEventListener('click', () => $('#profileDialog').close());
+  const profileCancel = $('#profileCancel');
+  if (profileCancel) profileCancel.addEventListener('click', () => $('#profileDialog').close());
+  const profileForm = $('#profileForm');
+  if (profileForm) profileForm.addEventListener('submit', saveProfile);
+  const profileAddSize = $('#profileAddSize');
+  if (profileAddSize) {
+    profileAddSize.addEventListener('click', () => {
+      const host = $('#profileSizeEditor');
+      if (!host) return;
+      const empty = host.querySelector('.profile-empty');
+      if (empty) host.innerHTML = '';
+      host.insertAdjacentHTML('beforeend', profileSizeRow());
+      const input = host.lastElementChild && host.lastElementChild.querySelector('[data-size-key]');
+      if (input) input.focus();
+    });
+  }
+  const profileSizeEditor = $('#profileSizeEditor');
+  if (profileSizeEditor) {
+    profileSizeEditor.addEventListener('click', (event) => {
+      const remove = event.target.closest('[data-size-remove]');
+      if (!remove) return;
+      const row = remove.closest('[data-profile-size]');
+      if (!row) return;
+      row.remove();
+      if (!profileSizeEditor.children.length) profileEmpty(profileSizeEditor, 'No sizes recorded. Add the labels the Gate should check against.');
+    });
+  }
+  const profileAddInventory = $('#profileAddInventory');
+  if (profileAddInventory) {
+    profileAddInventory.addEventListener('click', () => {
+      const host = $('#profileInventoryEditor');
+      if (!host) return;
+      const empty = host.querySelector('.profile-empty');
+      if (empty) host.innerHTML = '';
+      const count = host.querySelectorAll('[data-profile-inventory]').length;
+      host.insertAdjacentHTML('beforeend', profileInventoryRow({}, count));
+      reindexProfileInventory();
+      const input = host.lastElementChild && host.lastElementChild.querySelector('[data-inventory-name]');
+      if (input) input.focus();
+    });
+  }
+  const profileInventoryEditor = $('#profileInventoryEditor');
+  if (profileInventoryEditor) {
+    profileInventoryEditor.addEventListener('click', (event) => {
+      const remove = event.target.closest('[data-inventory-remove]');
+      if (!remove) return;
+      const row = remove.closest('[data-profile-inventory]');
+      if (!row) return;
+      row.remove();
+      if (!profileInventoryEditor.children.length) {
+        profileEmpty(profileInventoryEditor, 'No owned items tracked. Add what is already in rotation so the Gate can spot duplicates.');
+      } else {
+        reindexProfileInventory();
+      }
+    });
+  }
+
+  const helpBtn = $('#helpBtn');
+  if (helpBtn) helpBtn.addEventListener('click', openHelp);
+  const helpClose = $('#helpClose');
+  if (helpClose) helpClose.addEventListener('click', () => $('#helpDialog').close());
+  const helpSearch = $('#helpSearch');
+  if (helpSearch) {
+    helpSearch.addEventListener('input', () => {
+      state.help.q = helpSearch.value;
+      window.clearTimeout(state.help.timer);
+      state.help.timer = window.setTimeout(renderHelp, 90);
+    });
+  }
+  const helpCategories = $('#helpCategories');
+  if (helpCategories) {
+    helpCategories.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-help-category]');
+      if (!chip) return;
+      state.help.category = chip.dataset.helpCategory;
+      renderHelp();
+    });
+  }
+  const helpBody = $('#helpBody');
+  if (helpBody) {
+    helpBody.addEventListener('click', (event) => {
+      if (event.target.closest('[data-help-retry]')) { loadGlossary(); return; }
+      if (event.target.closest('[data-help-clear]')) {
+        state.help.q = '';
+        state.help.category = 'ALL';
+        if ($('#helpSearch')) $('#helpSearch').value = '';
+        renderHelp();
+      }
+    });
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== '?') return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const field = event.target.closest('input, textarea, select, [contenteditable="true"]');
+    if (field) return;
+    const dialog = $('#helpDialog');
+    if (dialog && dialog.open) return;
+    event.preventDefault();
+    openHelp();
+  });
 }
 
 async function init() {
