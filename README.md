@@ -38,7 +38,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 1. **Automated Browser Bookmark Importer & 14-Category Organizer (`scripts/sync-bookmarks.js`):**
    - Automatically scans local **Google Chrome**, **Brave Browser**, and **Microsoft Edge** bookmark stores.
    - Deduplicates **1,346 unique bookmarks** and classifies them into **14 structured categories** (Programming & Cloud, AI Models & Infra, Career & Interview Prep, Menswear & Streetwear, Fragrances & Cologne, Skincare/Health & Protocols, Watches/Footwear & Accessories, Soccer Kits, Global Sourcing Proxies, etc.).
-   - **Reference Library:** separates the **1,017 non-shopping links** into 10 reference shelves (Education, Programming, AI, Career, Business, Design, Security, Utilities, Gaming, Sourcing), with a live check, a short description, and a "use for" note on every entry. Confirmed-dead links are removed; bot-blocked and timeout entries stay marked for review. A post-audit review restored 9 false positives and logged every decision in `data/library-removal-review.json`.
+   - **Reference Library:** separates the **1,017 non-shopping links** into 10 reference shelves (Education, Programming, AI, Career, Business, Design, Cybersecurity, Utilities, Gaming, Sourcing), with a live check, a short description, and a "use for" note on every entry. Confirmed-dead links are removed; bot-blocked and timeout entries stay marked for review. A post-audit review restored 9 false positives and logged every decision in `data/library-removal-review.json`.
    - **Duplicate review and bulk shelf care:** a canonical-URL scan finds pages saved more than once (ignoring `utm_*`, `fbclid`, `www`, trailing slashes and parameter order) and lets you keep one copy while archiving the rest. Select mode adds archive, restore, and move-to-section actions; archived links stay recoverable from the **Archived** status filter.
    - **Generated cluster reference cards:** every one of the 14 clusters has a dedicated 800x600 SVG card in `public/cluster-cards/`, rendered on the cluster board for reference clusters and used as the fallback cover when a product cluster has no cached product image. Product clusters keep their live wishlist photos and thumbnails so the cover is always the actual item. Regenerate all cards with `npm run generate-cluster-cards`.
 2. **Smart Buyer & Impulse-Gate Engine:**
@@ -149,9 +149,9 @@ The canonical deployment is **[https://stashov.com](https://stashov.com)**.
 - [x] **Working project on Nebius Token Factory** using NVIDIA Nemotron models (Ultra, Super, Nano, Lightning)
 - [x] **Category: Personal AI** — always-on private assistant with persistent memory, skills, tool access
 - [x] **Project description** — what/why/how documented in this README
-- [ ] **Working demo URL** — [stashov.com](https://stashov.com); redeploy the latest build with `STASHOV_ACCESS_TOKEN` before submitting
+- [x] **Working demo URL** — [stashov.com](https://stashov.com) is live on Vercel from `master` (`/api/health` 200, `/api/vault` 401 signed out). Unlock it with the `STASHOV_ACCESS_TOKEN` set in Vercel, so share that token with the submission.
 - [ ] **≤3-minute public YouTube demo video** — walk through the Gate review, a routine, and the Library cleanup
-- [ ] **Public code repo** — [Arafat87/stashov-personal-ai](https://github.com/Arafat87/stashov-personal-ai); make the repository public and push the latest commit
+- [x] **Public code repo** — [Arafat87/stashov-personal-ai](https://github.com/Arafat87/stashov-personal-ai) is public and `master` is pushed
 - [x] **NVIDIA Nemotron + Token Factory usage highlighted** — model routing table above + telemetry console
 - [ ] **Feedback on Nebius + NVIDIA tools** — add to submission form
 - [x] **Category = Personal AI**
@@ -171,24 +171,41 @@ stashov-personal-ai/
 ├── README.md                    # This file
 ├── scripts/
 │   ├── sync-bookmarks.js        # Chrome/Brave/Edge bookmark importer + 14-category classifier
-│   └── audit-library.js         # Reference-link checker + description extractor
+│   ├── audit-library.js         # Reference-link checker + description extractor
+│   └── generate-cluster-cards.js # 800x600 SVG reference card per cluster
 ├── lib/
 │   ├── gate.js                  # 14-day gate state machine, buy/skip/snooze/reopen, ledger, budget caps
 │   ├── product-info.js          # JSON-LD/OpenGraph product capture for promoted bookmarks
 │   ├── promotion.js             # Pre-gate preview + reviewed wish construction
+│   ├── safe-fetch.js            # SSRF-safe page and image fetching
+│   ├── image-cache.js           # Raster-only product image cache
 │   ├── library.js               # Reference section taxonomy and classifier
+│   ├── sections.js              # Library shelf grouping and counts
+│   ├── clusters.js              # Vault cluster definitions and covers
 │   ├── routine.js               # Pasted-routine parser and conflict guardrails
-│   └── protocols.js             # Protocol create/update/delete
+│   ├── protocols.js             # Protocol CRUD and daily check-off log
+│   └── state.js                 # Atomic vault writes, backups, and hosted storage
 ├── jobs/
 │   └── nebius-serverless-worker.js  # Nebius Serverless Job: deal poller, link-rot verifier, digest generator
 ├── public/
-│   └── index.html               # 8-tab Web Vault (Deck, Vault, Library, Gate, Rules, You, Capture, Router)
+│   ├── index.html               # 8-tab Web Vault (Deck, Vault, Library, Gate, Rules, You, Capture, Router)
+│   ├── app.js                   # All client views, dialogs, and capture flow
+│   ├── styles.css               # Design system and responsive layout
+│   ├── views.css                # Per-view styling
+│   └── cluster-cards/           # 14 generated 800x600 cluster reference cards
 ├── data/
-│   └── vault.json               # SQLite-free JSON vault: 1,346 bookmarks, 13 wishlist items, 5 protocols, personal context, telemetry
+│   ├── vault.json               # SQLite-free JSON vault: 1,346 bookmarks, 13 wishlist items, 5 protocols, personal context, telemetry
+│   ├── sections.json            # Reference shelf definitions
+│   ├── clusters.json            # Cluster definitions and covers
+│   └── images/                  # Cached product photos
 └── tests/
     ├── gate.test.js             # Gate lifecycle, ledger rollover, budget caps, details, reopen/void
     ├── product-info.test.js     # JSON-LD/OpenGraph price and brand extraction
     ├── promotion.test.js        # Pre-gate preview and reviewed-price provenance
+    ├── capture-dom.test.js      # Bookmarklet DOM price fallback
+    ├── search-relevance.test.js # Lexical search ranking
+    ├── server-security.test.js  # Auth, origin, SSRF, and media guards
+    ├── routine-today.test.js    # Daily routine check-off log
     └── stashov.test.js          # Vault, classifier, embeddings, job, library, routine, protocol CRUD
 ```
 

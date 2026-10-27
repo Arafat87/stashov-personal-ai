@@ -6,10 +6,11 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || 'C:\\Users\\Arafat Sani', 'AppData', 'Local');
+const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || os.homedir(), 'AppData', 'Local');
 
 const BROWSER_PATHS = {
   Chrome: path.join(LOCALAPPDATA, 'Google', 'Chrome', 'User Data', 'Default', 'Bookmarks'),
