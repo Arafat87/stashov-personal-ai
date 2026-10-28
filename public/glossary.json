@@ -1412,7 +1412,7 @@
     {
       "term": "Telemetry",
       "category": "Router and background work",
-      "definition": "Per-call rows with timestamp, task, model, tier, latency, input/output tokens, and estimated cost. The Router tab shows calls logged, tokens routed, average latency, estimated spend, the model mesh, and the most recent rows. Telemetry lives in its own small store, not in the 2.4 MB vault.",
+      "definition": "Per-call rows with timestamp, task, model, tier, latency, input/output tokens, and estimated cost. Model calls record the provider's reported token counts; deterministic local actions record zero. The Router tab shows calls logged, tokens routed, average latency, estimated spend, the model mesh, and the most recent rows. Telemetry lives in its own small store, not in the 2.4 MB vault.",
       "keywords": [
         "Telemetry"
       ]

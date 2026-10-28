@@ -416,7 +416,7 @@ Budget fields are the exception to "static": when a gate route or the background
 
 **Oracle** — The deep-reasoning audit. **Ask the oracle** on a wish runs a one-item "talk me out of buying this" analysis; **Ask across your entire vault** runs a 1M-context synthesis over bookmarks, wishes, inventory, constraints, and routines.
 
-**Telemetry** — Per-call rows with timestamp, task, model, tier, latency, input/output tokens, and estimated cost. The Router tab shows calls logged, tokens routed, average latency, estimated spend, the model mesh, and the most recent rows. Telemetry lives in its own small store, not in the 2.4 MB vault.
+**Telemetry** — Per-call rows with timestamp, task, model, tier, latency, input/output tokens, and estimated cost. Model calls record the provider's reported token counts; deterministic local actions record zero. The Router tab shows calls logged, tokens routed, average latency, estimated spend, the model mesh, and the most recent rows. Telemetry lives in its own small store, not in the 2.4 MB vault.
 
 **Calls logged / Tokens routed / Avg latency / Router spend** — The four Router stat cards. Calls counted from the recent telemetry window; tokens are input + output; latency is the mean of logged calls; spend is an estimate, not a billing statement.
 

@@ -24,7 +24,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 | Cognitive Tier | Model on Nebius Token Factory | Role in Stashov |
 | :--- | :--- | :--- |
-| **1M-Context Deep Reasoning** | `nvidia/Nemotron-3-Ultra-550b-a55b` | Vault-wide synthesis across 1,346 bookmarks, "Talk Me Out of Buying This" impulse audits, skincare/supplement conflict detection, and weekly digests. |
+| **1M-Context Deep Reasoning** | `nvidia/Nemotron-3-Ultra-550b-a55b` | Full-digest vault synthesis (every one of the 1,346 bookmarks is sent, not just counts) and "Talk Me Out of Buying This" impulse audits. |
 | **Mid-Tier Agentic Synthesis** | `nvidia/Nemotron-3-Super-120b-a12b` | Promoting bookmarks into structured wishlist cards, protocol checklist generation, and dupe comparison. |
 | **Fast Structured Extraction** | `nvidia/Nemotron-3-Nano-30B-A3B` | Sub-second URL/transcript classification, auto-tagging across 14 categories, and function-calling price schema extraction. |
 | **Vision OCR Ingestion** | `zai-org/GLM-5.3-Flash` / `Qwen3.8-27B` | Camera-roll screenshot OCR (extracting product names, prices, brands, and routine steps from mobile screenshots). |
@@ -64,7 +64,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
    - Mobile: install the PWA from a share menu. The web manifest registers a **Web Share Target** at `/share-target`, so sharing a product link from Chrome/Android opens the pre-gate review (`/?capture=…`). HTTPS is required outside localhost.
    - The app also persists the active tab, Gate lane, Library section/status/search, and Vault cluster in the URL hash, so refresh and Back preserve the view.
 5. **2-Second Ingest Studio & Transparent Router Telemetry:**
-   - Ingests URLs, camera-roll screenshots, or notes and logs live model routing latency, token usage, and cost in the **Nebius Token Factory Telemetry Console**.
+   - Ingests URLs, pasted screenshot text, or notes with the local classifier, and logs **provider-reported** token counts for the two live model calls (impulse audit, vault audit) in the **Nebius Token Factory Telemetry Console**. Local actions record zero tokens; spend is a blended estimate, labelled as such.
 
 ---
 
@@ -315,7 +315,7 @@ stashov-personal-ai/
 | POST | `/api/wishlist/:id/reopen` | Return a bought/skipped wish to the gate; a bought wish's ledger entry is voided |
 | PUT | `/api/budget` | Update the monthly cap and optional per-category caps |
 | POST | `/api/ledger/:id/void` | Void a mistaken ledger entry and reopen its wish when linked |
-| POST | `/api/vault-audit` | 1M-context Nemotron 3 Ultra synthesis across entire vault |
+| POST | `/api/vault-audit` | 1M-context Nemotron 3 Ultra synthesis across the full bookmark digest; telemetry records provider token usage |
 | POST | `/api/serverless-job` | Trigger Nebius Serverless Job worker on demand |
 
 ---
@@ -324,7 +324,7 @@ stashov-personal-ai/
 
 > **Nebius Token Factory:** The OpenAI-compatible API made integration trivial — drop-in replacement for any OpenAI SDK. The model catalog (`/api/public/models_info`) exposes capabilities (`function_calling`, `context_and_rag`, `responses_api`, `MTP` fast decode) so routing logic is data-driven, not hardcoded. Pricing is transparent (e.g., Qwen3-Embedding-8B at $0.01/M tokens makes semantic memory near-free). Serverless Jobs are a perfect fit for periodic background work without managing infra.
 
-> **NVIDIA Nemotron 3 Ultra (1M context):** The 1M-token window is not a gimmick — it enables genuine multi-document synthesis in one pass: 1,346 bookmarks + full Reddit review threads + ingredient sheets + personal inventory + budget + routines. This is the "killer feature" that makes a personal AI actually *personal*.
+> **NVIDIA Nemotron 3 Ultra (1M context):** The 1M-token window is not a gimmick — the audit sends the digest of all 1,346 bookmarks in one pass, alongside the wishlist, routines, personal inventory and budget, so the model can cite specific saves instead of guessing from counts. This is the "killer feature" that makes a personal AI actually *personal*.
 
 > **Nemotron 3 Nano/Super/Lightning:** The tiered routing (Ultra for deep reasoning, Nano for fast extraction, Lightning for MTP decode) cuts latency and cost by 10x vs. using Ultra for everything. `Nemotron-3.5-Lightning` with MTP is notably fast for structured extraction.
 

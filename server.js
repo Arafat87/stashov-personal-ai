@@ -34,6 +34,7 @@ const {
   voidLedgerEntry,
 } = require('./lib/gate');
 const { buildPromotedWish, captureBookmarkProduct, captureFromSnapshot, previewFromCapture } = require('./lib/promotion');
+const { buildFallbackReport, buildVaultAuditMessages, usageFromResult } = require('./lib/vault-audit');
 const {
   appendTelemetry,
   readTelemetry,
@@ -215,6 +216,8 @@ async function callTokenFactoryChat(model, messages, maxTokens = 900) {
         max_tokens: maxTokens,
         temperature: 0.2,
       }),
+      // A 1M-context audit can run long; never let a hung socket hold the request.
+      signal: AbortSignal.timeout(60_000),
     });
     if (!resp.ok) {
       return { live: false, latency_ms: Date.now() - start, content: null };
@@ -225,7 +228,7 @@ async function callTokenFactoryChat(model, messages, maxTokens = 900) {
       live: true,
       latency_ms: Date.now() - start,
       content,
-      usage: data.usage || { prompt_tokens: 1800, completion_tokens: 350 },
+      usage: data.usage || null,
     };
   } catch (_) {
     return { live: false, latency_ms: Date.now() - start, content: null };
@@ -1148,12 +1151,12 @@ async function handleRequest(req, res) {
         recordTelemetry(
           vault,
           `Hybrid Semantic + Lexical Search: "${q}" (${list.length} matches)`,
-          `${MODELS.embedding} + ${MODELS.nano}`,
-          'Semantic Search & Rerank',
+          'Local lexical + vector index',
+          'Local recall',
           195,
-          640,
-          120,
-          0.00008
+          0,
+          0,
+          0
         );
       }
 
@@ -1176,12 +1179,12 @@ async function handleRequest(req, res) {
       recordTelemetry(
         vault,
         `Re-Synced Browser Bookmarks (${syncRes.total_unique} unique URLs across ${syncRes.browsers_synced.join(', ')})`,
-        MODELS.nano,
-        'Fast Extraction & Classification',
+        'Local bookmark importer',
+        'Local import',
         310,
-        14200,
-        1850,
-        0.0013
+        0,
+        0,
+        0
       );
       await saveVault(vault);
       return sendJson(res, 200, {
@@ -1213,8 +1216,10 @@ async function handleRequest(req, res) {
         folder: mode === 'screenshot' ? 'shopping' : '',
       });
 
-      const modelUsed = mode === 'screenshot' ? MODELS.vision : MODELS.nano;
-      const tierUsed = mode === 'screenshot' ? 'Vision OCR Ingestion' : 'Fast Structured Extraction';
+      // Ingest classifies locally from the pasted URL, note or OCR text. No model
+      // call happens here, so the telemetry must not claim one.
+      const modelUsed = 'Stashov local classifier';
+      const tierUsed = 'Local classification';
 
       // Check against owned inventory & routines for instant Impulse-Gate assessment
       const textLower = `${titleInput} ${rawInput}`.toLowerCase();
@@ -1293,9 +1298,9 @@ async function handleRequest(req, res) {
         modelUsed,
         tierUsed,
         410,
-        1450,
-        290,
-        0.00024
+        0,
+        0,
+        0
       );
       await saveVault(vault);
 
@@ -1354,15 +1359,17 @@ async function handleRequest(req, res) {
         `• Final Verdict: ${item.verdict_label || 'WAIT FOR COOLING-OFF TIMER'}`,
       ].join('\n');
 
+      const usage = usageFromResult(llmRes);
       const tel = recordTelemetry(
         vault,
         `Impulse-Gate Deep Audit: "${item.title.slice(0, 48)}"`,
         MODELS.ultra,
         '1M-Context Deep Reasoning',
-        llmRes.latency_ms || 1420,
-        12800,
-        540,
-        0.0144
+        usage.latency,
+        usage.tokensIn,
+        usage.tokensOut,
+        usage.cost,
+        usage.live ? 'SUCCESS' : 'FALLBACK'
       );
       await saveVault(vault);
 
@@ -1461,12 +1468,12 @@ async function handleRequest(req, res) {
       const tel = recordTelemetry(
         vault,
         `Promoted Bookmark to Impulse-Gate Wishlist: "${bm.title.slice(0, 45)}" (${newWl.price_status === 'captured' ? `$${newWl.lowest_verified_price.toFixed(2)} captured` : newWl.price_status === 'manual' ? `$${newWl.lowest_verified_price.toFixed(2)} reviewed` : 'price pending'})`,
-        MODELS.super,
-        'Structured Extraction & Gate Init',
+        'Local capture + gate init',
+        'Local promotion',
         340,
-        1900,
-        310,
-        0.00085
+        0,
+        0,
+        0
       );
       await saveVault(vault);
       return sendJson(res, 200, {
@@ -1493,55 +1500,29 @@ async function handleRequest(req, res) {
       }
       const body = await parseBody(req);
       const vault = loadVault();
-      const question = (body.question || 'Run a full 1M-context audit across my 1,337 bookmarks, wishlist, owned inventory, and daily routines.').trim();
-
-      const catSummary = {};
-      for (const b of vault.bookmarks || []) {
-        catSummary[b.category] = (catSummary[b.category] || 0) + 1;
-      }
-
+      const bookmarkCount = (vault.bookmarks || []).length;
+      const question = (body.question || `Run a full audit across my ${bookmarkCount.toLocaleString('en-US')} saved bookmarks, wishlist, owned inventory and daily routines.`).trim().slice(0, 500);
+      const budget = budgetSummary(vault);
+      const gate = gateSummary(vault);
       const llmRes = await callTokenFactoryChat(
         MODELS.ultra,
-        [
-          {
-            role: 'system',
-            content:
-              'You are Stashov’s 1M-Context Vault Auditor powered by NVIDIA Nemotron 3 Ultra on Nebius Token Factory. Synthesize the user’s 1,337 browser bookmarks, owned inventory, budget, and active routines into concrete findings.',
-          },
-          {
-            role: 'user',
-            content: `Question: ${question}\nBookmark Categories: ${JSON.stringify(catSummary)}\nWishlist: ${JSON.stringify(vault.wishlist)}\nProtocols: ${JSON.stringify(vault.protocols)}\nPersonal Context: ${JSON.stringify(vault.personal_context)}`,
-          },
-        ],
-        900
+        buildVaultAuditMessages({ vault, question, budget, gate }),
+        1200
       );
 
-      const defaultReport = [
-        `=== NEMOTRON 3 ULTRA (1M-CONTEXT) VAULT-WIDE SYNTHESIS ===`,
-        `Query: "${question}"`,
-        ``,
-        `1. BROWSER BOOKMARK CONSOLIDATION (1,337 Unique URLs across Chrome & Brave):`,
-        `   • Menswear & Streetwear (148 saves): You have 28 overlapping streetwear hoodie/cargo brands (BYLT, MNML, YoungLA, BlackTailor, Mauvais, SikSilk). Since you already own 2 heavyweight charcoal hoodies and a Tokyo Laundry winter parka, Stashov placed a hard duplicate-buy block on dark hoodies/parkas and elevated Quince ($59.90 Mongolian Cashmere) + Thursday Captain Boots ($159 Factory Seconds) as your only high-ROI wardrobe upgrades.`,
-        `   • Fragrances & Cologne (19 saves): You bookmarked both full-retail houses (Byredo $225, Acqua di Parma $195) AND wholesale discounters (Olfactory Factory LLC, FragranceNet, Mystic Perfume, Fragrance Nevaeh). Cross-linking these saves $87 immediately on Acqua di Parma Colonia Essenza ($108 vs $195).`,
-        `   • Soccer Kits (30 saves): Consolidated 8 separate kit stores (ClassicFootballShirts, Kitbag, Soccer03, GoGoalShop, AAAJersey Yupoo) under one <$40 clearance rule.`,
-        ``,
-        `2. ROUTINE & BIOHACKING SAFETY CONFLICTS DETECTED (26 Skincare & Peptide Saves):`,
-        `   • Skincare Conflict Blocked: Your bookmarked twnskn 2-in-1 Acne/Dark-Spot Bar contains exfoliating acids that conflict with your evening 0.1% Adapalene retinoid stack. Keep retinoid in PM; use Azelaic Acid + SPF 50 in AM.`,
-        `   • Research Peptide Vendor Audit: Across 11 saved peptide sites (Amino Club, Eternal Peptides, Vril, Vertex Labs, Peptide Sciences), 6 lack verifiable Janoshik HPLC third-party COAs. Prioritized RCT-backed oral Apolactoferrin (250mg, $32) for skin/immune support.`,
-        ``,
-        `3. CAREER & AI INFRASTRUCTURE ALIGNMENT (436 Programming/AI + 182 Career Saves):`,
-        `   • High-signal cluster detected around AI Infrastructure, Nebius, Hugging Face, and NYC IT/Platform Engineering roles. Your $215 remaining October fun-money budget easily covers the MOFT MagSafe tripod ($29.99) + Jack Henry deodorant ($19.20) + Acqua di Parma Essenza discounter bottle ($108), leaving $57.81 buffer.`,
-      ].join('\n');
+      const fallbackReport = buildFallbackReport({ vault, question, budget, gate });
 
+      const usage = usageFromResult(llmRes);
       const tel = recordTelemetry(
         vault,
         `1M-Context Vault Audit & Query: "${question.slice(0, 48)}"`,
         MODELS.ultra,
         '1M-Context Deep Reasoning',
-        llmRes.latency_ms || 1760,
-        84500,
-        1420,
-        0.0887
+        usage.latency,
+        usage.tokensIn,
+        usage.tokensOut,
+        usage.cost,
+        usage.live ? 'SUCCESS' : 'FALLBACK'
       );
       await saveVault(vault);
 
@@ -1549,7 +1530,7 @@ async function handleRequest(req, res) {
         ok: true,
         model: MODELS.ultra,
         live_nebius: llmRes.live,
-        report: llmRes.content || defaultReport,
+        report: llmRes.content || fallbackReport,
         telemetry: tel,
       });
     }

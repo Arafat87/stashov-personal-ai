@@ -94,14 +94,14 @@ async function runServerlessJob() {
   vault.telemetry.unshift({
     id: `tel_${Date.now()}`,
     timestamp: new Date().toISOString(),
-    task: `Nebius Serverless Job: Polled ${activeWishlist.length} Active Wishes & Verified ${bookmarks.length} Bookmarks`,
-    model: 'nvidia/Nemotron-3-Ultra-550b-a55b + Nano-30B',
-    tier: 'Nebius Serverless Background Job',
+    task: `Vault maintenance job: Polled ${activeWishlist.length} Active Wishes & Verified ${bookmarks.length} Bookmarks`,
+    model: 'Deterministic maintenance job',
+    tier: 'Local scheduled job',
     latency_ms: digestReport.duration_ms,
-    tokens_in: 28400,
-    tokens_out: 1120,
-    cost_usd: 0.0317,
-    status: 'SUCCESS',
+    tokens_in: 0,
+    tokens_out: 0,
+    cost_usd: 0,
+    status: 'SIMULATED',
   });
   vault.last_digest = digestReport;
   await writeVault(vault);
