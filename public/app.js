@@ -828,6 +828,12 @@ function renderWantedStrip(v) {
   const allWishes = clusterWishes(v, name);
   const hero = clusterHero(v, name, meta);
   const wishes = hero ? [hero, ...allWishes.filter((wish) => wish.id !== hero.id)] : allWishes;
+  // A cluster with nothing gated yet shows no strip at all. The empty panel
+  // read as an unfinished room and pushed the photo cards below the fold.
+  if (!wishes.length) {
+    strip.hidden = true;
+    return;
+  }
   strip.hidden = false;
   strip.style.setProperty('--tone', clusterTone(v, name));
   if ($('#wantedTitle')) $('#wantedTitle').textContent = name;
@@ -841,10 +847,7 @@ function renderWantedStrip(v) {
   }
   const rail = $('#wantedRail');
   if (!rail) return;
-  rail.classList.toggle('is-empty', !wishes.length);
-  rail.innerHTML = wishes.length
-    ? wishes.map(wantedCardMarkup).join('')
-    : `<div class="wanted-empty"><p>No wishlist item in this cluster yet. Promote a signal from the index, or set a custom cover.</p><button type="button" class="btn ghost sm" data-cover="${esc(name)}"><svg class="icon"><use href="#i-image"/></svg> Set a cover</button></div>`;
+  rail.innerHTML = wishes.map(wantedCardMarkup).join('');
 }
 
 function bookmarkGlyph(b) {
