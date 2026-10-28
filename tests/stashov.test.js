@@ -18,6 +18,7 @@ const { runServerlessJob } = require('../jobs/nebius-serverless-worker');
 const { librarySectionFor, librarySectionsWithCounts } = require('../lib/library');
 const { parseRoutine } = require('../lib/routine');
 const { createProtocol, updateProtocol, deleteProtocol } = require('../lib/protocols');
+const { defaultClusterMode } = require('../lib/clusters');
 const { readVault } = require('../lib/state');
 
 test('Vault contains the imported browser bookmarks organized across 14 categories', () => {
@@ -118,6 +119,13 @@ test('Pasted routine is structured and gets a conflict guardrail', () => {
   assert.ok(routine.steps.some((step) => step.startsWith('PM — ')));
   assert.match(routine.conflict_alert, /retinoid/i);
   assert.match(routine.conflict_alert, /exfoliating acids/i);
+});
+
+test('Cluster modes keep the career shelf out of the shopping photo gallery', () => {
+  assert.equal(defaultClusterMode('Career, Jobs & Interview Prep'), 'reference');
+  assert.equal(defaultClusterMode('Programming, Cloud & Dev Tools'), 'reference');
+  assert.equal(defaultClusterMode('Business, Finance & Auto/Real Estate'), 'product');
+  assert.equal(defaultClusterMode('Menswear & Streetwear'), 'product');
 });
 
 test('Protocol CRUD round-trip leaves the five seeded protocols intact', async () => {

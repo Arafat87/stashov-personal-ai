@@ -658,7 +658,7 @@ function syncCustomPanels() {
   });
 }
 
-const PRODUCT_CLUSTER_RE = /(menswear|streetwear|fragrance|cologne|perfume|skincare|health|watch|footwear|accessor|soccer|sportswear|food|halal|grocer|auto|car|real estate)/i;
+const PRODUCT_CLUSTER_RE = /(menswear|streetwear|fragrance|cologne|perfume|skincare|health|watch|footwear|accessor|soccer|sportswear|food|halal|grocer|\bauto\b|\bcar\b|real estate)/i;
 const CLUSTER_ICON_RULES = [
   [/programming|dev|cloud/i, 'i-command'],
   [/ai models|agents|infra/i, 'i-spark'],
@@ -852,7 +852,9 @@ function bookmarkGlyph(b) {
 }
 
 function isPhotoCluster(name) {
-  return PRODUCT_CLUSTER_RE.test(String(name || ''));
+  // Server cluster metadata decides which clusters shop and which are
+  // reference shelves. The loose pattern would read "Career" as "car".
+  return clusterMeta(state.vault, name).mode === 'product';
 }
 
 /** Product clusters get a picture slot; reference clusters stay text cards. */
