@@ -34,7 +34,7 @@ const {
   voidLedgerEntry,
 } = require('./lib/gate');
 const { buildPromotedWish, captureBookmarkProduct, captureFromSnapshot, previewFromCapture } = require('./lib/promotion');
-const { buildFallbackReport, buildVaultAuditMessages, usageFromResult } = require('./lib/vault-audit');
+const { buildFallbackReport, buildVaultAuditMessages, extractReport, usageFromResult } = require('./lib/vault-audit');
 const {
   appendTelemetry,
   readTelemetry,
@@ -1511,10 +1511,12 @@ async function handleRequest(req, res) {
       const llmRes = await callTokenFactoryChat(
         MODELS.ultra,
         buildVaultAuditMessages({ vault, question, budget, gate }),
-        1200
+        // Reasoning tokens count against this budget too; leave room for the report.
+        2500
       );
 
       const fallbackReport = buildFallbackReport({ vault, question, budget, gate });
+      const report = extractReport(llmRes.content) || fallbackReport;
 
       const usage = usageFromResult(llmRes);
       const tel = recordTelemetry(
@@ -1534,7 +1536,7 @@ async function handleRequest(req, res) {
         ok: true,
         model: MODELS.ultra,
         live_nebius: llmRes.live,
-        report: llmRes.content || fallbackReport,
+        report,
         telemetry: tel,
       });
     }

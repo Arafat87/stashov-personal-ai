@@ -5,6 +5,7 @@ const {
   buildBookmarkDigest,
   buildFallbackReport,
   buildVaultAuditMessages,
+  extractReport,
   usageFromResult,
 } = require('../lib/vault-audit');
 
@@ -74,6 +75,9 @@ test('The audit prompt sends the real digest and current budget/gate context', (
   assert.equal(messages[0].role, 'system');
   assert.match(messages[0].content, /complete digest of the user's 2 saved bookmarks/);
   assert.match(messages[0].content, /Never invent a bookmark/);
+  assert.match(messages[0].content, /Return only the finished report/);
+  assert.match(messages[0].content, /@@REPORT@@/);
+  assert.match(messages[0].content, /must begin with the first numbered finding/);
 
   const user = messages[1].content;
   assert.match(user, /Question: What should I skip this month\?/);
@@ -81,6 +85,21 @@ test('The audit prompt sends the real digest and current budget/gate context', (
   assert.match(user, /BOOKMARK DIGEST — 2 saved links/);
   assert.match(user, /thursdayboots\.com/);
   assert.ok(!user.includes('1,337'), 'the old hardcoded bookmark count must be gone');
+});
+
+test('The report extractor drops scratch work before the marker', () => {
+  const raw = 'The user wants a vault audit. Let me inspect the digest first.\n\n@@REPORT@@\n\n1. BUY NOTHING\n- The SEIKO is still cooling.';
+  const report = extractReport(raw);
+  assert.match(report, /^1\. BUY NOTHING/);
+  assert.ok(!report.includes('The user wants'));
+  assert.ok(!report.includes('@@REPORT@@'));
+});
+
+test('The report extractor leaves a clean report untouched', () => {
+  const clean = '1. BUY NOTHING\n- Nothing clears the gate this week.';
+  assert.equal(extractReport(clean), clean);
+  assert.equal(extractReport(''), '');
+  assert.equal(extractReport(null), '');
 });
 
 test('The fallback reports only data that exists in the vault', () => {
