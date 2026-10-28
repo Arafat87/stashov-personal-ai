@@ -49,6 +49,8 @@ const {
   readClusters,
   readImage,
   snapshotVault,
+  readyBookmarkPhotos,
+  saveBookmarkPhoto,
 } = require('./lib/state');
 
 const PORT = (() => {
@@ -1164,7 +1166,13 @@ async function handleRequest(req, res) {
         );
       }
 
-      const sliced = list.slice(offset, offset + limit).map(({ embedding, ...rest }) => rest);
+      // Photos captured from the saved page live in a sidecar so the vault
+      // itself is not rewritten for every image. A bookmark's own image wins.
+      const photoMap = await readyBookmarkPhotos();
+      const sliced = list.slice(offset, offset + limit).map(({ embedding, ...rest }) => ({
+        ...rest,
+        image: rest.image || photoMap[rest.id] || '',
+      }));
       return sendJson(res, 200, {
         total: list.length,
         offset,
@@ -1428,6 +1436,37 @@ async function handleRequest(req, res) {
         preview: previewFromCapture(bm, capture),
         possible_duplicates: findPossibleDuplicates(vault, bm, capture.product && capture.product.title),
       });
+    }
+
+    // 6b. POST /api/bookmarks/:id/image — cache the saved product photo so the
+    // cluster gallery can show a picture card instead of a text-only signal.
+    const bookmarkPhotoMatch = pathname.match(/^\/api\/bookmarks\/([^/]+)\/image$/);
+    if (req.method === 'POST' && bookmarkPhotoMatch) {
+      if (!rateLimit(req, 'bookmark-photo', 120, 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Photo capture is limited to 120 per minute.' }, { 'Retry-After': '60' });
+      }
+      const vault = loadVault();
+      let id = '';
+      try { id = decodeURIComponent(bookmarkPhotoMatch[1]); } catch (_) {
+        return sendJson(res, 400, { error: 'Invalid bookmark id.' });
+      }
+      const bm = (vault.bookmarks || []).find((bookmark) => bookmark.id === id);
+      if (!bm) return sendJson(res, 404, { error: 'Bookmark not found' });
+      const saved = (await readyBookmarkPhotos())[id];
+      if (isCachedImage(bm.image)) return sendJson(res, 200, { ok: true, id, image: bm.image, cached: true });
+      if (isCachedImage(saved)) return sendJson(res, 200, { ok: true, id, image: saved, cached: true });
+      try {
+        const image = await resolveImage(bm.url, { pageUrl: bm.url });
+        await saveBookmarkPhoto(id, image);
+        return sendJson(res, 200, { ok: true, id, image });
+      } catch (err) {
+        return sendJson(res, 200, {
+          ok: false,
+          id,
+          image: '',
+          error: err.status === 422 ? err.message : 'That page did not expose a usable product photo.',
+        });
+      }
     }
 
     // 7. POST /api/promote-bookmark — Promote a bookmark or pasted link into the Impulse-Gated Wishlist

@@ -40,3 +40,7 @@ data/telemetry.json
 *.tmp
 *.temp
 .vercel
+
+# Generated bookmark photo cache
+data/bookmark-photos.json
+data/images/*

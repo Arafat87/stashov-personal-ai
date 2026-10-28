@@ -847,26 +847,158 @@ function renderWantedStrip(v) {
     : `<div class="wanted-empty"><p>No wishlist item in this cluster yet. Promote a signal from the index, or set a custom cover.</p><button type="button" class="btn ghost sm" data-cover="${esc(name)}"><svg class="icon"><use href="#i-image"/></svg> Set a cover</button></div>`;
 }
 
+function bookmarkGlyph(b) {
+  return String(b.domain || b.title || '?').replace(/^www\./, '').charAt(0).toUpperCase() || '?';
+}
+
+function isPhotoCluster(name) {
+  return PRODUCT_CLUSTER_RE.test(String(name || ''));
+}
+
+/** Product clusters get a picture slot; reference clusters stay text cards. */
+function bookmarkPhotoSlot(b, glyph) {
+  const image = safeImage(b.image);
+  if (image) {
+    return `<a class="signal-media" href="${esc(safeUrl(b.url))}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><img src="${esc(image)}" alt="" loading="lazy" decoding="async" /></a>`;
+  }
+  if (!isPhotoCluster(b.category)) return '';
+  if (photoFailures.has(String(b.id))) {
+    return `<a class="signal-media is-missing" href="${esc(safeUrl(b.url))}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><span class="signal-photo-glyph">${esc(glyph)}</span><span class="signal-photo-note"><span>Open source</span></span></a>`;
+  }
+  return `<span class="signal-media is-pending" data-photo-slot aria-hidden="true"><span class="signal-photo-glyph">${esc(glyph)}</span><span class="signal-photo-note"><i></i><span>No photo yet</span></span></span>`;
+}
+
 function bookmarkCard(b, index) {
-  const glyph = String(b.domain || b.title || '?').replace(/^www\./, '').charAt(0).toUpperCase() || '?';
+  const glyph = bookmarkGlyph(b);
+  const media = bookmarkPhotoSlot(b, glyph);
   const tags = (b.tags || []).slice(0, 4).map((t) => `<span class="tag">#${esc(t)}</span>`).join('');
   const meta = [b.original_folder, b.snapshot_status].filter(Boolean).join(' · ');
   const score = b.match_score ? `<span class="match-score" title="Hybrid semantic match score">${b.match_score}</span>` : '';
   return `
-  <article class="signal-card" style="--i:${Math.min(index, 12)}">
-    <div class="signal-top">
-      <span class="domain-glyph" aria-hidden="true">${esc(glyph)}</span>
-      <span class="signal-domain" title="${esc(b.domain)}">${esc(b.domain)}</span>
-      ${score}
-      <span class="signal-cat" title="${esc(b.category)}">${esc(b.category)}</span>
-    </div>
-    <h3 class="signal-title"><a href="${esc(safeUrl(b.url))}" target="_blank" rel="noopener noreferrer">${esc(b.title)}</a></h3>
-    <div class="signal-tags">${tags || `<span class="tag">#${esc(b.browser)}</span>`}</div>
-    <div class="signal-foot">
-      <span class="signal-browser" title="${esc(meta)}">${esc(b.browser)}${b.original_folder ? ' · ' + esc(b.original_folder) : ''}</span>
-      <button type="button" class="gate-btn" data-promote="${esc(b.id)}" aria-label="Review and gate ${esc(b.title)}"><svg class="icon"><use href="#i-gate"/></svg> Review</button>
+  <article class="signal-card ${media ? 'has-media' : ''} ${media && !safeImage(b.image) ? 'is-photo-pending' : ''}" data-bm-id="${esc(b.id)}" data-bm-url="${esc(safeUrl(b.url))}" data-bm-glyph="${esc(glyph)}" style="--i:${Math.min(index, 12)};--tone:${esc(clusterTone(state.vault, b.category))}">
+    ${media}
+    <div class="signal-body">
+      <div class="signal-top">
+        ${media ? '' : `<span class="domain-glyph" aria-hidden="true">${esc(glyph)}</span>`}
+        <span class="signal-domain" title="${esc(b.domain)}">${esc(b.domain)}</span>
+        ${score}
+        <span class="signal-cat" title="${esc(b.category)}">${esc(b.category)}</span>
+      </div>
+      <h3 class="signal-title"><a href="${esc(safeUrl(b.url))}" target="_blank" rel="noopener noreferrer">${esc(b.title)}</a></h3>
+      <div class="signal-tags">${tags || `<span class="tag">#${esc(b.browser)}</span>`}</div>
+      <div class="signal-foot">
+        <span class="signal-browser" title="${esc(meta)}">${esc(b.browser)}${b.original_folder ? ' · ' + esc(b.original_folder) : ''}</span>
+        <button type="button" class="gate-btn" data-promote="${esc(b.id)}" aria-label="Review and gate ${esc(b.title)}"><svg class="icon"><use href="#i-gate"/></svg> Review</button>
+      </div>
     </div>
   </article>`;
+}
+
+/* ————— CLUSTER PHOTO CARDS ————— */
+const photoFailures = new Set();
+let photoRun = 0;
+
+function bookmarkCardNode(id) {
+  const value = String(id || '').replace(/"/g, '\\"');
+  return document.querySelector(`.signal-card[data-bm-id="${value}"]`);
+}
+
+function photoFallbackNode(glyph, url) {
+  const slot = document.createElement('a');
+  slot.className = 'signal-media is-missing';
+  slot.href = safeUrl(url);
+  slot.target = '_blank';
+  slot.rel = 'noopener noreferrer';
+  slot.tabIndex = -1;
+  slot.setAttribute('aria-hidden', 'true');
+  slot.innerHTML = `<span class="signal-photo-glyph">${esc(glyph || '?')}</span><span class="signal-photo-note"><span>Open source</span></span>`;
+  return slot;
+}
+
+function markPhotoSearching(id) {
+  const card = bookmarkCardNode(id);
+  const note = card && card.querySelector('.signal-photo-note span');
+  if (note) note.textContent = 'Finding photo';
+}
+
+function markPhotoFailed(id) {
+  const card = bookmarkCardNode(id);
+  if (!card) return;
+  const slot = card.querySelector('[data-photo-slot]');
+  if (slot) slot.replaceWith(photoFallbackNode(card.dataset.bmGlyph, card.dataset.bmUrl));
+  card.classList.remove('is-photo-pending');
+}
+
+function applyBookmarkPhoto(id, image) {
+  const card = bookmarkCardNode(id);
+  if (!card) return;
+  const link = document.createElement('a');
+  link.className = 'signal-media';
+  link.href = card.dataset.bmUrl || '#';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.tabIndex = -1;
+  link.setAttribute('aria-hidden', 'true');
+  const img = document.createElement('img');
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.addEventListener('load', () => card.classList.add('has-photo'));
+  img.addEventListener('error', () => {
+    photoFailures.add(String(id));
+    link.replaceWith(photoFallbackNode(card.dataset.bmGlyph, card.dataset.bmUrl));
+  });
+  img.src = image;
+  link.appendChild(img);
+  const slot = card.querySelector('[data-photo-slot]');
+  if (slot) slot.replaceWith(link); else card.prepend(link);
+  card.classList.add('has-media');
+  card.classList.remove('is-photo-pending');
+}
+
+/** Product-looking URLs are read first so the gallery fills with real photos sooner. */
+function photoPriority(bookmark) {
+  const url = String(bookmark.url || '');
+  let score = 0;
+  if (/\/(products?|collections|shop|item|dp|p|c|category|pages?)\//i.test(url)) score += 3;
+  if (/\.(avif|gif|jpe?g|png|webp)([?#]|$)/i.test(url)) score += 2;
+  return score;
+}
+
+async function hydrateBookmarkPhotos() {
+  if (state.tab !== 'vault') return;
+  const run = ++photoRun;
+  const targets = state.items
+    .filter((b) => b && b.id && !safeImage(b.image) && isPhotoCluster(b.category) && !photoFailures.has(String(b.id)))
+    .sort((a, b) => photoPriority(b) - photoPriority(a));
+  if (!targets.length) return;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < targets.length) {
+      const item = targets[cursor++];
+      if (run !== photoRun || state.tab !== 'vault') return;
+      markPhotoSearching(item.id);
+      try {
+        const data = await postJSON(`/api/bookmarks/${encodeURIComponent(item.id)}/image`);
+        if (run !== photoRun) return;
+        if (data && data.image) {
+          item.image = data.image;
+          applyBookmarkPhoto(item.id, data.image);
+        } else {
+          photoFailures.add(String(item.id));
+          markPhotoFailed(item.id);
+        }
+      } catch (_) {
+        if (run !== photoRun) return;
+        // A transport or rate-limit failure is not proof the page has no photo;
+        // leave the slot available so a later visit retries it.
+        const card = bookmarkCardNode(item.id);
+        const note = card && card.querySelector('.signal-photo-note span');
+        if (note) note.textContent = 'No photo yet';
+      }
+    }
+  };
+  await Promise.all([worker(), worker()]);
 }
 function renderSkeletons() {
   const grid = $('#bmGrid');
@@ -895,6 +1027,7 @@ async function loadBookmarks(reset) {
   const grid = $('#bmGrid');
   if (!grid) return;
   if (reset) {
+    photoRun += 1;
     state.items = [];
     setResultStatus(q ? `Searching memory for “${q}”…` : 'Loading signals…');
     renderSkeletons();
@@ -952,6 +1085,7 @@ function renderBookmarkResults(q) {
   if (active) active.textContent = (state.category === 'ALL' ? 'ALL CLUSTERS' : state.category.toUpperCase()) + browserSuffix;
   const more = $('#loadMoreBtn');
   if (more) more.hidden = state.items.length >= state.total || !state.total;
+  hydrateBookmarkPhotos();
 }
 
 function captureSourceLabel(source) {

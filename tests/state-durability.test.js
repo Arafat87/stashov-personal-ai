@@ -10,7 +10,15 @@ for (const name of ['vault.json', 'sections.json', 'clusters.json']) {
   fs.copyFileSync(path.join(__dirname, '..', 'data', name), path.join(tempDir, name));
 }
 
-const { BACKUP_DIR, TELEMETRY_PATH, appendTelemetry, readTelemetry, writeVault } = require('../lib/state');
+const {
+  BACKUP_DIR,
+  TELEMETRY_PATH,
+  appendTelemetry,
+  readTelemetry,
+  readyBookmarkPhotos,
+  saveBookmarkPhoto,
+  writeVault,
+} = require('../lib/state');
 
 test('a second vault write keeps the previous file as .bak and creates a rotating snapshot', async () => {
   const first = { bookmarks: [], wishlist: [], protocols: [], marker: 'first' };
@@ -25,6 +33,17 @@ test('a second vault write keeps the previous file as .bak and creates a rotatin
 
   const snapshots = fs.readdirSync(BACKUP_DIR).filter((name) => name.startsWith('vault-'));
   assert.ok(snapshots.length >= 1, 'expected at least one rotating vault snapshot');
+});
+
+test('bookmark photos persist in a sidecar instead of rewriting the vault', async () => {
+  const vaultPath = path.join(tempDir, 'vault.json');
+  const before = fs.statSync(vaultPath).mtimeMs;
+  await saveBookmarkPhoto('bm_1', '/media/images/abc.jpg');
+
+  const stored = JSON.parse(fs.readFileSync(path.join(tempDir, 'bookmark-photos.json'), 'utf8'));
+  assert.equal(stored.bm_1, '/media/images/abc.jpg');
+  assert.equal((await readyBookmarkPhotos(true)).bm_1, '/media/images/abc.jpg');
+  assert.equal(fs.statSync(vaultPath).mtimeMs, before, 'an image cache write must not touch the vault');
 });
 
 test('telemetry stays out of the vault and is capped at 50 entries', async () => {

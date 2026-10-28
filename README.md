@@ -40,6 +40,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
    - Deduplicates **1,346 unique bookmarks** and classifies them into **14 structured categories** (Programming & Cloud, AI Models & Infra, Career & Interview Prep, Menswear & Streetwear, Fragrances & Cologne, Skincare/Health & Protocols, Watches/Footwear & Accessories, Soccer Kits, Global Sourcing Proxies, etc.).
    - **Reference Library:** separates the **1,017 non-shopping links** into 10 reference shelves (Education, Programming, AI, Career, Business, Design, Cybersecurity, Utilities, Gaming, Sourcing), with a live check, a short description, and a "use for" note on every entry. Confirmed-dead links are removed; bot-blocked and timeout entries stay marked for review. A post-audit review restored 9 false positives and logged every decision in `data/library-removal-review.json`.
    - **Duplicate review and bulk shelf care:** a canonical-URL scan finds pages saved more than once (ignoring `utm_*`, `fbclid`, `www`, trailing slashes and parameter order) and lets you keep one copy while archiving the rest. Select mode adds archive, restore, and move-to-section actions; archived links stay recoverable from the **Archived** status filter.
+   - **Photo cards inside a cluster:** shopping clusters render their saved links as image cards. Each card reads the page's OpenGraph/JSON-LD photo through the SSRF-safe reader and caches it, so a saved product shows its picture beside its title, domain and cluster tag. The photo map lives in its own small store (`state/bookmark-photos.json`), never in the 2.4 MB vault. Reference clusters keep the compact text card, and a link with no usable photo shows a designed source tile instead of a broken image.
    - **Generated cluster reference cards:** every one of the 14 clusters has a dedicated 800x600 SVG card in `public/cluster-cards/`, rendered on the cluster board for reference clusters and used as the fallback cover when a product cluster has no cached product image. Product clusters keep their live wishlist photos and thumbnails so the cover is always the actual item. Regenerate all cards with `npm run generate-cluster-cards`.
 2. **Smart Buyer & Impulse-Gate Engine:**
    - **"Already Own" Closet & Shelf Overlap Check:** Blocks duplicate impulse saves (e.g., flagging a saved parka when you already own a Black Quilted Winter Parka).
@@ -289,7 +290,8 @@ stashov-personal-ai/
 | GET | `/api/export` | Download a complete vault + sections + cluster-cover backup |
 | POST | `/api/import` | Validate and restore a backup after writing a pre-import snapshot |
 | GET | `/api/vault` | Full vault summary + personal context + wishlist + gate/ledger state + protocols + routine log + telemetry |
-| GET | `/api/bookmarks` | Paginated, filtered lexical search across 1,346 bookmarks, with a local vector tie-breaker |
+| GET | `/api/bookmarks` | Paginated, filtered lexical search across 1,346 bookmarks, with a local vector tie-breaker and cached page photos merged into each item |
+| POST | `/api/bookmarks/:id/image` | Read and cache a saved link's page photo for its cluster card; the photo map is stored separately from the vault |
 | GET | `/api/library` | Paginated reference library with sections, search, health status, descriptions; `status=archived` lists archived links |
 | GET | `/api/library/duplicates` | Groups library links that resolve to the same canonical URL |
 | POST | `/api/library/bulk` | Archive, restore, or refile up to 250 library links at once |
