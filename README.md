@@ -71,7 +71,7 @@ Every task in Stashov is routed to the optimal open-weight model on **Nebius Tok
 
 ## Gallery
 
-Ten frames captured from the running app, each **1800 × 1200 (3:2)** and under 5 MB — the same set used for the submission gallery, in upload order. Every thumbnail below opens the full-resolution file; the complete set lives in [`screenshots/gallery/`](screenshots/gallery), with capture notes in its [README](screenshots/gallery/README.md).
+Eleven frames captured from the running app, each **1800 × 1200 (3:2)** and under 5 MB — the same set used for the submission gallery, in upload order. Every thumbnail below opens the full-resolution file; the complete set lives in [`screenshots/gallery/`](screenshots/gallery), with capture notes in its [README](screenshots/gallery/README.md).
 
 <table>
   <tr>
@@ -124,9 +124,16 @@ Ten frames captured from the running app, each **1800 × 1200 (3:2)** and under 
       <sub><b>10. ledger-budget.png</b> — Monthly fun-money ledger with category caps and history</sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="screenshots/gallery/vault-photo-cards.png"><img src="screenshots/gallery/thumbs/vault-photo-cards.png" width="430" alt="Vault cluster gallery with product photos"></a><br>
+      <sub><b>11. vault-photo-cards.png</b> — Vault cluster filtered to Food, Halal &amp; Specialty Groceries: saved product links as photo cards with cached images, tags and cluster labels</sub>
+    </td>
+    <td width="50%" valign="top"></td>
+  </tr>
 </table>
 
-Frames 1–7 and 10 are live UI captured in headless Chrome at 2400×1600 and downscaled. Frame 8 renders the actual `public/cluster-cards/*.svg` files; frame 9 pairs two real phone captures with the manifest's `share_target` block. The Gate and ledger frames used a throwaway vault copy seeded through the app's own API, so `data/vault.json` was never modified and every lane could be shown populated.
+Frame 11 is a live capture of [stashov.com](https://stashov.com) at 1800 × 1200, taken after the photo cache was backfilled across all seven shopping clusters. Frames 1–7 and 10 are live UI captured in headless Chrome at 2400×1600 and downscaled. Frame 8 renders the actual `public/cluster-cards/*.svg` files; frame 9 pairs two real phone captures with the manifest's `share_target` block. The Gate and ledger frames used a throwaway vault copy seeded through the app's own API, so `data/vault.json` was never modified and every lane could be shown populated.
 
 ## Vocabulary
 
@@ -141,7 +148,7 @@ The same definitions are searchable inside the app from **Help** in the top bar 
 Stashov is a personal vault, so the server is locked down by default:
 
 - **Loopback binding.** `HOST` defaults to `127.0.0.1`. Binding a non-loopback interface without `STASHOV_ACCESS_TOKEN` is refused at startup unless `STASHOV_ALLOW_INSECURE_NETWORK=1` is explicitly set.
-- **Access token.** Set `STASHOV_ACCESS_TOKEN` for any shared or hosted deployment. The unlock page stores an HMAC-derived session in an `HttpOnly; SameSite=Lax` cookie; the token itself is never written to `localStorage`. Lax still blocks cross-site POSTs while letting a bookmarklet or an external link open the vault without a second unlock. A public `STASHOV_PUBLIC_ORIGIN` with no token returns `503` instead of serving the vault unprotected.
+- **Access token.** Set `STASHOV_ACCESS_TOKEN` for any shared or hosted deployment. The unlock page stores an HMAC-derived session in an `HttpOnly; SameSite=Lax` cookie; the token itself is never written to `localStorage`. Lax still blocks cross-site POSTs while letting a bookmarklet or an external link open the vault without a second unlock. A public `STASHOV_PUBLIC_ORIGIN` with no token returns `503` instead of serving the vault unprotected. The live demo at [stashov.com](https://stashov.com) is token-gated too: judges unlock it with the token posted in the submission portal's project notes, never one committed here.
 - **Origin and content-type checks.** Cross-origin writes, `Origin: null`, and API writes with a body that is not JSON are rejected. Wildcard CORS is gone. A host allowlist blocks DNS rebinding on local installs; set `STASHOV_PUBLIC_ORIGIN` for a custom domain or reverse proxy. Malformed `Host` headers get a `400` instead of taking the process down.
 - **Security headers.** CSP (self-hosted scripts only), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, COOP/CORP, and HSTS behind HTTPS.
 - **SSRF-safe fetching.** Product pages and images go through `lib/safe-fetch.js`: every redirect is revalidated, DNS is resolved and pinned to the connection, private/loopback/link-local/metadata addresses are blocked, credentials and non-standard ports are rejected, and response size/time limits apply.
