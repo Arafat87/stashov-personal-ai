@@ -1511,8 +1511,9 @@ async function handleRequest(req, res) {
       const llmRes = await callTokenFactoryChat(
         MODELS.ultra,
         buildVaultAuditMessages({ vault, question, budget, gate }),
-        // Reasoning tokens count against this budget too; leave room for the report.
-        2500
+        // Reasoning tokens count against this budget too. A 2,500-token cap
+        // truncated the report mid-analysis; 8,000 leaves room to finish.
+        8000
       );
 
       const fallbackReport = buildFallbackReport({ vault, question, budget, gate });
