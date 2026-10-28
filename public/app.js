@@ -780,6 +780,10 @@ function renderCategories(v) {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const head = $('#vaultHeadCount');
   if (head) head.textContent = fmt(v.total_bookmarks || 0);
+  const auditIdle = $('#auditOutput');
+  if (auditIdle && auditIdle.textContent.startsWith('The oracle is idle.')) {
+    auditIdle.textContent = `The oracle is idle. Run a synthesis to audit ${fmt(v.total_bookmarks || 0)} bookmarks, your wardrobe, budget and routines in a single pass.`;
+  }
   const panelCount = $('#catPanelCount');
   if (panelCount) panelCount.textContent = `${entries.length} CLUSTERS`;
   const allCount = $('#clusterAllCount');

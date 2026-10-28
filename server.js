@@ -583,6 +583,10 @@ async function handleRequest(req, res) {
       }
       const budget = budgetSummary(vault);
       const gate = gateSummary(vault);
+      const telemetryRows = await readTelemetry();
+      const legacyTelemetry = (vault.telemetry || []).filter(
+        (entry) => !telemetryRows.some((row) => row.id === entry.id)
+      );
       if (!vault.meta || vault.meta.gate_schema_version !== 3) {
         vault.meta = { ...(vault.meta || {}), gate_schema_version: 3 };
         await saveVault(vault);
@@ -598,7 +602,7 @@ async function handleRequest(req, res) {
         gate,
         protocols: vault.protocols,
         routine_log: vault.routine_log || {},
-        telemetry: [...readTelemetry(), ...((vault.telemetry || []).filter((entry) => !readTelemetry().some((row) => row.id === entry.id)))].slice(0, 25),
+        telemetry: [...telemetryRows, ...legacyTelemetry].slice(0, 25),
         last_digest: vault.last_digest || null,
         category_counts: catCounts,
         cluster_meta: getClusterMetaMap(Object.keys(catCounts)),

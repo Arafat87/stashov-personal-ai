@@ -33,7 +33,7 @@ test('telemetry stays out of the vault and is capped at 50 entries', async () =>
   for (let index = 0; index < 55; index += 1) {
     await appendTelemetry({ id: `tel_${index}`, task: 'test' });
   }
-  const entries = readTelemetry();
+  const entries = await readTelemetry();
   assert.equal(entries.length, 50);
   assert.equal(entries[0].id, 'tel_54');
   assert.ok(fs.existsSync(TELEMETRY_PATH));
